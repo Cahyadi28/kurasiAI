@@ -3,9 +3,12 @@ parameters:
     phpVersion: 80100
     level: 6
     paths:
+        - bootstrap.php
+        - demo
         - prototipe
+        - src
         - tests
     # Folder contoh/ sengaja tidak dianalisis: berisi contoh yang memang salah
     # untuk diperlihatkan di naskah. Contoh dijalankan manual saat pemeriksaan bab.
     # Folder berikut ditambahkan ke "paths" begitu mulai dipakai:
-    #   src dan demo (Bab 2), bin (Bab 12), public (Bab 14)
+    #   bin (Bab 12), public (Bab 14)
