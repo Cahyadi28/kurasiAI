@@ -3,6 +3,7 @@ parameters:
     phpVersion: 80100
     level: 6
     paths:
+        - bin
         - demo
         - prototipe
         - src
@@ -21,4 +22,4 @@ parameters:
     # Folder contoh/ sengaja tidak dianalisis: berisi contoh yang memang salah
     # untuk diperlihatkan di naskah. Contoh dijalankan manual saat pemeriksaan bab.
     # Folder berikut ditambahkan ke "paths" begitu mulai dipakai:
-    #   bin (Bab 12), public (Bab 14)
+    #   public (Bab 14)
