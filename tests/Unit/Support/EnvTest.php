@@ -117,4 +117,15 @@ class EnvTest extends TestCase
 
         Env::fromString('APP_TIMEZONE=Jakarta')->timezone();
     }
+
+    public function testPositiveInt(): void
+    {
+        $this->assertSame(30, Env::fromString('')->positiveInt('AI_TIMEOUT', 30));
+        $this->assertSame(45, Env::fromString('AI_TIMEOUT=45')->positiveInt('AI_TIMEOUT', 30));
+
+        $this->expectException(ConfigException::class);
+        $this->expectExceptionMessage('AI_TIMEOUT di .env harus berupa bilangan bulat positif, contoh: 30.');
+
+        Env::fromString('AI_TIMEOUT=setengah menit')->positiveInt('AI_TIMEOUT', 30);
+    }
 }

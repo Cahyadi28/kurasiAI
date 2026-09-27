@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Integration\Http;
 
+use KurasiAI\Ai\AiProvider;
 use KurasiAI\App;
 use KurasiAI\Domain\Content\ContentType;
 use KurasiAI\Domain\Role;
@@ -36,6 +37,9 @@ abstract class HttpTestCase extends TestCase
     /** @var array<mixed> isi session, seperti $_SESSION */
     protected array $session = [];
 
+    /** Mesin AI pengganti untuk tes tertentu; null berarti sesuai .env tes (FakeAiProvider). */
+    protected ?AiProvider $aiProvider = null;
+
     protected function setUp(): void
     {
         $schema = file_get_contents(dirname(__DIR__, 3) . '/database/schema.sql');
@@ -60,10 +64,12 @@ abstract class HttpTestCase extends TestCase
 
     protected function app(): App
     {
-        return App::fromEnv(Env::fromString('APP_ENV=testing'), dirname(__DIR__, 3))
+        $app = App::fromEnv(Env::fromString('APP_ENV=testing'), dirname(__DIR__, 3))
             ->replaceDatabase($this->db)
             ->replaceSession(new Session($this->session))
             ->replaceClock($this->clock);
+
+        return $this->aiProvider === null ? $app : $app->replaceAiProvider($this->aiProvider);
     }
 
     /**

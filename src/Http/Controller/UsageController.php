@@ -18,12 +18,21 @@ final class UsageController extends Controller
     public function index(Request $request, array $params): Response
     {
         $user = $this->requireUser();
-        $totals = $this->app->usage()->totalsPerUser();
+        // Yang ditampilkan: pemakaian provider yang sedang dipakai (AI_PROVIDER), supaya
+        // token FakeAiProvider dari masa belajar tidak ikut dihitung biayanya.
+        $provider = $this->app->aiProvider()->name();
+        $totals = $this->app->usage()->totalsPerUser($provider);
 
         if (!$user->role->canReview()) {
             $totals = array_values(array_filter($totals, fn (UsageTotal $total): bool => $total->userId === $user->id));
         }
 
-        return $this->render('usage', ['pageTitle' => 'Log pemakaian AI', 'totals' => $totals]);
+        return $this->render('usage', [
+            'pageTitle' => 'Log pemakaian AI',
+            'totals' => $totals,
+            'provider' => $provider,
+            // Mesin tiruan tidak berbayar, jadi perkiraan biaya hanya untuk provider sungguhan.
+            'costs' => $provider === 'fake' ? null : $this->app->costEstimator(),
+        ]);
     }
 }

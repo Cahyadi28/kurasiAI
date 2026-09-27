@@ -8,6 +8,7 @@ use KurasiAI\Domain\Draft;
 use KurasiAI\Domain\DraftStatus;
 use KurasiAI\Domain\User;
 use KurasiAI\Exception\AccessDeniedException;
+use KurasiAI\Exception\AiProviderException;
 use KurasiAI\Exception\ValidationException;
 use KurasiAI\Http\Form\DraftForm;
 use KurasiAI\Http\Form\FormInput;
@@ -60,8 +61,19 @@ final class DraftController extends Controller
                 "/drafts/{$draft->id}",
                 "Draf #{$draft->id} dibuat. Periksa dan rapikan isinya sebelum dikirim ke review.",
             );
+        } catch (AiProviderException $e) {
+            // Pengguna melihat pesan ramah; detail teknis (status HTTP, request-id) hanya ke log server.
+            error_log('AI gagal: ' . ($e->getPrevious()?->getMessage() ?? $e->getMessage()));
+
+            return $this->render('generate', [
+                'pageTitle' => 'Buat draf',
+                'template' => $template,
+                'values' => $values,
+                'errors' => (new ValidationErrors())->with(ValidationErrors::FORM, $e->getMessage()),
+            ]);
         } catch (ValidationException $e) {
-            // Misalnya "Variabel belum diisi: topik." dari PromptTemplate::render().
+            // Misalnya "Variabel belum diisi: topik." dari PromptTemplate::render(), atau jawaban AI
+            // yang tidak memenuhi aturan jenis konten (misalnya artikel terlalu pendek).
             return $this->render('generate', [
                 'pageTitle' => 'Buat draf',
                 'template' => $template,

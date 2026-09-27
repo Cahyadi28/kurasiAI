@@ -96,6 +96,24 @@ final class Env
     }
 
     /**
+     * Bilangan bulat positif, misalnya AI_TIMEOUT=30. Kosong berarti $default.
+     */
+    public function positiveInt(string $key, int $default): int
+    {
+        $value = $this->get($key);
+
+        if ($value === '') {
+            return $default;
+        }
+
+        if (preg_match('/^[1-9][0-9]*$/', $value) !== 1) {
+            throw new ConfigException("$key di .env harus berupa bilangan bulat positif, contoh: $default.");
+        }
+
+        return (int) $value;
+    }
+
+    /**
      * Path berkas dari .env. Path relatif dianggap relatif terhadap folder proyek.
      */
     public function path(string $key, string $projectRoot): string

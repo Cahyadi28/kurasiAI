@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace KurasiAI;
 
 use DateTimeZone;
+use KurasiAI\Ai\AiProvider;
+use KurasiAI\Ai\AnthropicProvider;
+use KurasiAI\Ai\CostEstimator;
 use KurasiAI\Ai\FakeAiProvider;
+use KurasiAI\Ai\Http\CurlHttpClient;
 use KurasiAI\Domain\User;
 use KurasiAI\Exception\AccessDeniedException;
 use KurasiAI\Exception\ConfigException;
@@ -56,6 +60,7 @@ final class App
     private ?Csrf $csrf = null;
     private ?View $view = null;
     private ?SessionAuth $sessionAuth = null;
+    private ?AiProvider $aiProvider = null;
 
     private function __construct(
         public readonly Env $env,
@@ -114,6 +119,13 @@ final class App
         return $this;
     }
 
+    public function replaceAiProvider(AiProvider $provider): self
+    {
+        $this->aiProvider = $provider;
+
+        return $this;
+    }
+
     // ---- Objek aplikasi -------------------------------------------------------------
 
     public function timezone(): DateTimeZone
@@ -146,15 +158,34 @@ final class App
         return $this->drafts ??= new SqliteDraftRepository($this->db(), $this->timezone());
     }
 
+    /**
+     * Mesin AI sesuai AI_PROVIDER di .env. Bagian lain aplikasi hanya mengenal interface AiProvider.
+     */
+    public function aiProvider(): AiProvider
+    {
+        return $this->aiProvider ??= match ($this->env->get('AI_PROVIDER', 'fake')) {
+            'fake' => new FakeAiProvider(),
+            'anthropic' => new AnthropicProvider(
+                new CurlHttpClient(),
+                $this->env->required('AI_API_KEY'),
+                $this->env->required('AI_MODEL'),
+                $this->env->positiveInt('AI_TIMEOUT', 30),
+            ),
+            default => throw new ConfigException(
+                'AI_PROVIDER "' . $this->env->get('AI_PROVIDER') . '" tidak dikenal. Pilihan: fake, anthropic.'
+            ),
+        };
+    }
+
+    /** Perkiraan biaya, atau null bila harga belum diisi di .env. */
+    public function costEstimator(): ?CostEstimator
+    {
+        return CostEstimator::fromEnv($this->env);
+    }
+
     public function generator(): DraftGenerator
     {
-        $provider = $this->env->get('AI_PROVIDER', 'fake');
-
-        if ($provider !== 'fake') {
-            throw new ConfigException("AI_PROVIDER \"$provider\" belum tersedia. Provider sungguhan dibahas di Bab Bonus.");
-        }
-
-        return new DraftGenerator(new FakeAiProvider(), $this->drafts(), $this->clock());
+        return new DraftGenerator($this->aiProvider(), $this->drafts(), $this->clock());
     }
 
     public function review(): ReviewService

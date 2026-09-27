@@ -27,11 +27,23 @@ class UsageLogRepositoryTest extends DatabaseTestCase
         $this->assertEquals(new TokenUsage(15, 60), $repository->totalFor($rina));
     }
 
-    private function insertUsage(int $userId, int $input, int $output): void
+    public function testTotalsCanBeLimitedToOneProvider(): void
+    {
+        $rina = $this->insertUser('rina@kurasiai.test');
+        $this->insertUsage($rina, 10, 40);
+        $this->insertUsage($rina, 100, 400, 'anthropic');
+
+        $totals = (new UsageLogRepository($this->db))->totalsPerUser('anthropic');
+
+        $this->assertSame(1, $totals[0]->generations);
+        $this->assertEquals(new TokenUsage(100, 400), $totals[0]->usage);
+    }
+
+    private function insertUsage(int $userId, int $input, int $output, string $provider = 'fake'): void
     {
         $this->pdo->prepare(
             "INSERT INTO usage_logs (user_id, provider, input_tokens, output_tokens, created_at)
-             VALUES (:user, 'fake', :input, :output, '2026-10-05T09:00:00+07:00')"
-        )->execute(['user' => $userId, 'input' => $input, 'output' => $output]);
+             VALUES (:user, :provider, :input, :output, '2026-10-05T09:00:00+07:00')"
+        )->execute(['user' => $userId, 'provider' => $provider, 'input' => $input, 'output' => $output]);
     }
 }

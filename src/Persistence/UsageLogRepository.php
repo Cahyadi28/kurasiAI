@@ -18,21 +18,25 @@ final class UsageLogRepository
 
     /**
      * Total pemakaian setiap pengguna, termasuk yang belum pernah generate (nilainya nol).
+     * Bila $provider diisi (misalnya 'anthropic'), hanya pemakaian provider itu yang dihitung.
      *
      * @return list<UsageTotal>
      */
-    public function totalsPerUser(): array
+    public function totalsPerUser(?string $provider = null): array
     {
-        $rows = $this->db->pdo()->query(
+        // Syarat provider ditaruh di ON, bukan WHERE, supaya pengguna tanpa pemakaian tetap muncul.
+        $statement = $this->db->pdo()->prepare(
             'SELECT u.id, u.name,
                     COUNT(l.id) AS generations,
                     COALESCE(SUM(l.input_tokens), 0) AS input_tokens,
                     COALESCE(SUM(l.output_tokens), 0) AS output_tokens
              FROM users u
-             LEFT JOIN usage_logs l ON l.user_id = u.id
+             LEFT JOIN usage_logs l ON l.user_id = u.id AND (:provider IS NULL OR l.provider = :provider)
              GROUP BY u.id, u.name
              ORDER BY u.id'
-        )->fetchAll();
+        );
+        $statement->execute(['provider' => $provider]);
+        $rows = $statement->fetchAll();
 
         return array_map(
             fn (array $row): UsageTotal => new UsageTotal(

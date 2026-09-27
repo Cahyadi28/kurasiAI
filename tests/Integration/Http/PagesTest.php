@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Integration\Http;
 
+use KurasiAI\Ai\AnthropicProvider;
+use KurasiAI\Tests\Fakes\FakeHttpClient;
+
 class PagesTest extends HttpTestCase
 {
     public function testUnknownPagesGive404(): void
@@ -64,5 +67,47 @@ class PagesTest extends HttpTestCase
         $valid = $this->post('/templates/new', ['name' => 'Naskah singkat', 'text' => 'Buat naskah video tentang {{topik}}.', 'target_type' => 'video_script']);
         $this->assertRedirect('/', $valid);
         $this->assertStringContainsString('Naskah singkat', $this->get('/')->body);
+    }
+
+    public function testFailingAiShowsAFriendlyMessageAndSavesNothing(): void
+    {
+        $this->aiProvider = new AnthropicProvider(
+            FakeHttpClient::error(429, 'rate_limit_error', 'slow down'),
+            'kunci-palsu',
+            'model-tes',
+        );
+        $this->loginAs('rina@kurasiai.test');
+
+        // Detail teknis dicatat lewat error_log(); di tes, catatannya ditampung di berkas sementara.
+        $log = (string) tempnam(sys_get_temp_dir(), 'log');
+        $previousLog = ini_set('error_log', $log);
+
+        try {
+            $response = $this->post('/templates/2/generate', ['values' => ['topik' => 'hemat air']]);
+        } finally {
+            ini_set('error_log', (string) $previousLog);
+        }
+
+        $this->assertStringContainsString('HTTP 429 rate_limit_error', (string) file_get_contents($log), 'Detail masuk log.');
+        unlink($log);
+        $this->assertSame(200, $response->status);
+        $this->assertStringContainsString('Batas pemakaian layanan AI tercapai.', $response->body);
+        $this->assertStringNotContainsString('kunci-palsu', $response->body);
+        $this->assertSame(0, (int) $this->db->pdo()->query('SELECT COUNT(*) FROM drafts')->fetchColumn());
+    }
+
+    public function testRealProviderResultIsSavedWithItsUsage(): void
+    {
+        $this->aiProvider = new AnthropicProvider(
+            FakeHttpClient::success('{"title": "Hemat Air", "body": "Matikan keran saat menyikat gigi. #hematair"}'),
+            'kunci-palsu',
+            'model-tes',
+        );
+        $this->loginAs('rina@kurasiai.test');
+
+        $this->assertRedirect('/drafts/1', $this->post('/templates/2/generate', ['values' => ['topik' => 'hemat air']]));
+
+        $row = $this->db->pdo()->query('SELECT provider, input_tokens, output_tokens FROM usage_logs')->fetch();
+        $this->assertSame(['provider' => 'anthropic', 'input_tokens' => 42, 'output_tokens' => 180], $row);
     }
 }
