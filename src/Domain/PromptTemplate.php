@@ -112,11 +112,19 @@ final class PromptTemplate
         return new Prompt($text ?? '');
     }
 
-    public function update(User $actor, string $name, string $text, DateTimeImmutable $at): void
+    /**
+     * Memastikan pelaku boleh mengubah template ini. Dipakai update() dan halaman form (Bab 14).
+     */
+    public function authorizeUpdate(User $actor): void
     {
         if (!$this->isCreatedBy($actor)) {
             throw new AccessDeniedException('Hanya pembuat template yang boleh mengubahnya.');
         }
+    }
+
+    public function update(User $actor, string $name, string $text, DateTimeImmutable $at): void
+    {
+        $this->authorizeUpdate($actor);
 
         $newName = $this->validName($name);
         $newText = $this->validText($text);

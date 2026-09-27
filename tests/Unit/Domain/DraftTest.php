@@ -218,6 +218,21 @@ class DraftTest extends TestCase
         $this->assertCount(4, $draft->history());
     }
 
+    public function testWhoMaySeeTheDraft(): void
+    {
+        $otherWriter = new User(3, 'Sari', 'sari@contoh.id', Role::Writer);
+        $draft = $this->makeDraft();
+
+        $this->assertTrue($draft->isVisibleTo($this->writer), 'Pemilik selalu boleh melihat.');
+        $this->assertFalse($draft->isVisibleTo($this->editor), 'Editor belum boleh melihat draf yang belum dikirim.');
+        $this->assertFalse($draft->isVisibleTo($otherWriter));
+
+        $draft->submit($this->writer, $this->at('09:15'));
+
+        $this->assertTrue($draft->isVisibleTo($this->editor));
+        $this->assertFalse($draft->isVisibleTo($otherWriter), 'Penulis lain tidak pernah boleh melihat.');
+    }
+
     public function testRestoreBringsBackHistoryAndTimestamps(): void
     {
         $history = [

@@ -124,6 +124,15 @@ class Draft
     }
 
     /**
+     * Siapa boleh melihat draf ini: pemiliknya, atau Editor lain setelah draf dikirim ke review.
+     */
+    public function isVisibleTo(User $user): bool
+    {
+        return $this->isOwnedBy($user)
+            || ($user->role->canReview() && $this->status !== DraftStatus::Draft);
+    }
+
+    /**
      * Mengganti konten dengan versi baru yang JENISNYA SAMA.
      * Hanya pemilik, dan hanya saat status Draf atau Ditolak.
      */

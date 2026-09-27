@@ -6,6 +6,7 @@ parameters:
         - bin
         - demo
         - prototipe
+        - public
         - src
         - tests
     excludePaths:
@@ -21,7 +22,9 @@ parameters:
         - demo/bab-10.php
         - demo/bab-11.php
         - demo/bab-12.php
+        # Tampilan contoh untuk ViewTest, alasannya sama dengan folder views/.
+        - tests/Fixtures
     # Folder contoh/ sengaja tidak dianalisis: berisi contoh yang memang salah
     # untuk diperlihatkan di naskah. Contoh dijalankan manual saat pemeriksaan bab.
-    # Folder berikut ditambahkan ke "paths" begitu mulai dipakai:
-    #   public (Bab 14)
+    # Folder views/ tidak dianalisis: berkasnya dimuat View::render() dan memakai $this serta
+    # variabel dari extract(), yang tidak bisa diikuti PHPStan. Tipe variabelnya ditulis di @var.
