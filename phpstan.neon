@@ -8,6 +8,9 @@ parameters:
         - prototipe
         - src
         - tests
+    excludePaths:
+        # Demo bab lama tidak diperbarui saat class berubah; kodenya tersimpan di tag git bab-XX.
+        - demo/bab-02.php
     # Folder contoh/ sengaja tidak dianalisis: berisi contoh yang memang salah
     # untuk diperlihatkan di naskah. Contoh dijalankan manual saat pemeriksaan bab.
     # Folder berikut ditambahkan ke "paths" begitu mulai dipakai:
