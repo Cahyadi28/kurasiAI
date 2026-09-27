@@ -218,6 +218,52 @@ class DraftTest extends TestCase
         $this->assertCount(4, $draft->history());
     }
 
+    public function testRestoreBringsBackHistoryAndTimestamps(): void
+    {
+        $history = [
+            new StatusChange(DraftStatus::Draft, DraftStatus::InReview, 1, $this->at('09:15')),
+            new StatusChange(DraftStatus::InReview, DraftStatus::Rejected, 2, $this->at('10:40'), 'Tambahkan contoh.'),
+        ];
+
+        $draft = $this->restore(DraftStatus::Rejected, $history);
+
+        $this->assertSame(DraftStatus::Rejected, $draft->status());
+        $this->assertSame($history, $draft->history());
+        $this->assertSame('Tambahkan contoh.', $draft->rejectionNote());
+        $this->assertEquals($this->at('11:00'), $draft->updatedAt());
+
+        $draft->revise($this->writer, new Article('Energi surya', str_repeat('Isi dengan contoh. ', 20)), $this->at('11:30'));
+        $draft->submit($this->writer, $this->at('11:35'));
+
+        $this->assertCount(3, $draft->history());
+    }
+
+    public function testRestoreRejectsStatusThatDoesNotMatchHistory(): void
+    {
+        $this->expectException(InvalidStateException::class);
+        $this->expectExceptionMessage('Data draf #1 tidak konsisten: statusnya Terbit, tetapi riwayatnya berakhir di Draf.');
+
+        $this->restore(DraftStatus::Published, []);
+    }
+
+    /**
+     * @param list<StatusChange> $history
+     */
+    private function restore(DraftStatus $status, array $history): Draft
+    {
+        return Draft::restore(
+            id: 1,
+            authorId: $this->writer->id,
+            content: new Article('Energi surya', str_repeat('Energi surya itu bersih. ', 15)),
+            prompt: new Prompt('Tulis artikel tentang energi surya.'),
+            status: $status,
+            usage: null,
+            createdAt: $this->at('09:00'),
+            updatedAt: $this->at('11:00'),
+            history: $history,
+        );
+    }
+
     private function makeDraft(): Draft
     {
         return new Draft(

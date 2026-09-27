@@ -70,6 +70,7 @@ final class Database
 
     /**
      * Menjalankan $work sebagai satu kesatuan: semua perintahnya tersimpan, atau tidak satu pun.
+     * Kalau dipanggil di dalam transaksi lain, $work ikut menjadi bagian transaksi luar itu.
      *
      * @template T
      * @param callable(PDO): T $work
@@ -77,6 +78,12 @@ final class Database
      */
     public function transaction(callable $work): mixed
     {
+        if ($this->pdo->inTransaction()) {
+            // Commit atau rollBack diurus transaksi paling luar. Exception dibiarkan lewat
+            // supaya transaksi luar ikut dibatalkan.
+            return $work($this->pdo);
+        }
+
         $this->pdo->beginTransaction();
 
         try {

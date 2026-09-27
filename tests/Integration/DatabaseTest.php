@@ -59,6 +59,23 @@ class DatabaseTest extends DatabaseTestCase
         $this->assertFalse($this->pdo->inTransaction());
     }
 
+    public function testNestedTransactionJoinsTheOuterOne(): void
+    {
+        $authorId = $this->insertUser('rina@kurasiai.test');
+
+        try {
+            $this->db->transaction(function () use ($authorId): void {
+                $this->db->transaction(fn () => $this->insertDraft($authorId));
+                $this->db->transaction(fn () => $this->insertDraft($authorId, 'status_ngawur'));
+            });
+            $this->fail('Status yang tidak sah seharusnya ditolak database.');
+        } catch (PDOException) {
+            // memang diharapkan
+        }
+
+        $this->assertSame(0, $this->rowCount('drafts'), 'Transaksi dalam yang sudah berhasil ikut dibatalkan.');
+    }
+
     public function testTransactionRethrowsTheOriginalException(): void
     {
         $this->expectException(RuntimeException::class);

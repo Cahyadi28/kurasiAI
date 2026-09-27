@@ -10,11 +10,12 @@ declare(strict_types=1);
  */
 
 use KurasiAI\Domain\Content\ContentType;
-use KurasiAI\Domain\PromptTemplate;
 use KurasiAI\Domain\Role;
 use KurasiAI\Exception\ConfigException;
 use KurasiAI\Exception\KurasiException;
 use KurasiAI\Persistence\Database;
+use KurasiAI\Persistence\PromptTemplateRepository;
+use KurasiAI\Persistence\UserRepository;
 use KurasiAI\Support\Env;
 use KurasiAI\Support\SystemClock;
 
@@ -39,66 +40,43 @@ try {
     }
 
     $db = Database::fromEnv($env, $root);
+    $users = new UserRepository($db);
+    $templates = new PromptTemplateRepository($db, $env->timezone());
     $now = (new SystemClock($env->timezone()))->now();
 
-    $existing = (int) $db->pdo()->query('SELECT COUNT(*) FROM users')->fetchColumn();
-
-    if ($existing > 0) {
+    if ($users->all() !== []) {
         throw new ConfigException('Data contoh sudah ada. Untuk mengulang: php bin/setup-db.php --fresh lalu php bin/seed.php');
     }
 
-    // Template dibuat sebagai objek dulu, supaya aturan validasinya ikut diperiksa sebelum disimpan.
-    $templates = [
-        new PromptTemplate('Artikel edukasi', 'Tulis artikel tentang {{topik}} untuk {{pembaca}}.', ContentType::Article, $now),
-        new PromptTemplate('Caption kampanye', 'Buat caption Instagram tentang {{topik}}.', ContentType::Caption, $now),
-    ];
-
-    $db->transaction(function (PDO $pdo) use ($accounts, $templates, $password, $now): void {
-        $insertUser = $pdo->prepare(
-            'INSERT INTO users (name, email, role, password_hash, created_at)
-             VALUES (:name, :email, :role, :password_hash, :created_at)'
-        );
-
-        $firstUserId = null;
+    // Semua data contoh tersimpan bersama, atau tidak sama sekali.
+    // Transaksi di dalam repository ikut menjadi bagian transaksi luar ini.
+    $created = $db->transaction(function () use ($accounts, $users, $templates, $password, $now): array {
+        $created = [];
 
         foreach ($accounts as $account) {
-            $insertUser->execute([
-                'name' => $account['name'],
-                'email' => $account['email'],
-                'role' => $account['role']->value,
-                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                'created_at' => $now->format(DATE_ATOM),
-            ]);
-
-            // lastInsertId(): nomor id yang baru saja dibuat database.
-            $firstUserId ??= (int) $pdo->lastInsertId();
+            $created[] = $users->add(
+                $account['name'],
+                $account['email'],
+                $account['role'],
+                password_hash($password, PASSWORD_DEFAULT),
+                $now,
+            );
         }
 
         // Template contoh dibuat oleh akun pertama (Rina).
-        $insertTemplate = $pdo->prepare(
-            'INSERT INTO prompt_templates (name, text, target_type, created_by, created_at, updated_at)
-             VALUES (:name, :text, :target_type, :created_by, :created_at, :updated_at)'
-        );
+        $templates->add($created[0], 'Artikel edukasi', 'Tulis artikel tentang {{topik}} untuk {{pembaca}}.', ContentType::Article, $now);
+        $templates->add($created[0], 'Caption kampanye', 'Buat caption Instagram tentang {{topik}}.', ContentType::Caption, $now);
 
-        foreach ($templates as $template) {
-            $insertTemplate->execute([
-                'name' => $template->name(),
-                'text' => $template->text(),
-                'target_type' => $template->targetType->value,
-                'created_by' => $firstUserId,
-                'created_at' => $template->createdAt()->format(DATE_ATOM),
-                'updated_at' => $template->updatedAt()->format(DATE_ATOM),
-            ]);
-        }
+        return $created;
     });
 
-    echo count($accounts) . ' akun dibuat (password: nilai SEED_PASSWORD di .env):' . PHP_EOL;
+    echo count($created) . ' akun dibuat (password: nilai SEED_PASSWORD di .env):' . PHP_EOL;
 
-    foreach ($accounts as $account) {
-        echo "  - {$account['email']} ({$account['role']->label()})" . PHP_EOL;
+    foreach ($created as $user) {
+        echo "  - #{$user->id} {$user->email} ({$user->role->label()})" . PHP_EOL;
     }
 
-    echo count($templates) . ' template contoh dibuat.' . PHP_EOL;
+    echo count($templates->all()) . ' template contoh dibuat.' . PHP_EOL;
 } catch (KurasiException | RuntimeException $e) {
     fwrite(STDERR, 'Gagal: ' . $e->getMessage() . PHP_EOL);
     exit(1);

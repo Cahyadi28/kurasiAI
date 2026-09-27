@@ -13,6 +13,7 @@ use KurasiAI\Domain\Role;
 use KurasiAI\Domain\User;
 use KurasiAI\Exception\AccessDeniedException;
 use KurasiAI\Exception\InvalidStateException;
+use KurasiAI\Persistence\InMemoryDraftRepository;
 use KurasiAI\Service\ReviewService;
 use KurasiAI\Support\FixedClock;
 use PHPUnit\Framework\TestCase;
@@ -20,6 +21,7 @@ use PHPUnit\Framework\TestCase;
 class ReviewServiceTest extends TestCase
 {
     private FixedClock $clock;
+    private InMemoryDraftRepository $drafts;
     private ReviewService $service;
     private User $rina;
     private User $sari;
@@ -28,7 +30,8 @@ class ReviewServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->clock = FixedClock::at('2026-10-05 09:00');
-        $this->service = new ReviewService($this->clock);
+        $this->drafts = new InMemoryDraftRepository();
+        $this->service = new ReviewService($this->clock, $this->drafts);
         $this->rina = new User(1, 'Rina', 'rina@contoh.id', Role::Writer);
         $this->sari = new User(2, 'Sari', 'sari@contoh.id', Role::Writer);
         $this->budi = new User(3, 'Budi', 'budi@contoh.id', Role::Editor);
@@ -90,16 +93,18 @@ class ReviewServiceTest extends TestCase
         $this->service->submit($first, $this->rina);
         $this->service->submit($ownDraft, $this->budi);
 
-        $queue = $this->service->reviewQueue($this->budi, [$first, $second, $notSubmitted, $ownDraft]);
+        $queue = $this->service->reviewQueue($this->budi);
 
+        // Draf #3 belum dikirim dan draf #4 milik Budi sendiri, jadi keduanya tidak masuk antrean.
         $this->assertSame([2, 1], array_map(fn (Draft $draft): int => $draft->id, $queue));
+        $this->assertSame(DraftStatus::Draft, $notSubmitted->status());
     }
 
     public function testOnlyEditorsHaveAReviewQueue(): void
     {
         $this->expectException(AccessDeniedException::class);
 
-        $this->service->reviewQueue($this->rina, []);
+        $this->service->reviewQueue($this->rina);
     }
 
     public function testWaitingTimeCountsFromTheLatestSubmission(): void
@@ -126,14 +131,32 @@ class ReviewServiceTest extends TestCase
         $this->service->waitingTime($draft);
     }
 
-    private function makeDraft(int $id, User $author): Draft
+    public function testEveryActionIsSaved(): void
     {
-        return new Draft(
-            id: $id,
+        $draft = $this->makeDraft(1, $this->rina);
+
+        $this->service->submit($draft, $this->rina);
+        $this->service->reject($draft, $this->budi, 'Perbaiki judul.');
+
+        $stored = $this->drafts->get($draft->id);
+
+        $this->assertSame(DraftStatus::Rejected, $stored->status());
+        $this->assertCount(2, $stored->history());
+    }
+
+    /**
+     * Draf baru disimpan lewat repository; nomornya harus sesuai urutan pembuatan di tes.
+     */
+    private function makeDraft(int $expectedId, User $author): Draft
+    {
+        $draft = $this->drafts->add(
             authorId: $author->id,
             content: new Caption('Hemat air', 'Matikan keran saat menggosok gigi. #hematair'),
             prompt: new Prompt('Buat caption tentang hemat air.'),
             createdAt: $this->clock->now(),
         );
+        $this->assertSame($expectedId, $draft->id);
+
+        return $draft;
     }
 }

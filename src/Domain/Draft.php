@@ -35,6 +35,47 @@ class Draft
         $this->initializeTimestamps($createdAt);
     }
 
+    /**
+     * Membangun ulang draf yang sudah tersimpan, lengkap dengan riwayat dan waktu terakhir diubah.
+     * Hanya dipakai repository. Status harus cocok dengan akhir riwayatnya.
+     *
+     * @param list<StatusChange> $history
+     */
+    public static function restore(
+        int $id,
+        int $authorId,
+        Content $content,
+        Prompt $prompt,
+        DraftStatus $status,
+        ?TokenUsage $usage,
+        DateTimeImmutable $createdAt,
+        DateTimeImmutable $updatedAt,
+        array $history,
+    ): self {
+        $expected = $history === [] ? DraftStatus::Draft : $history[array_key_last($history)]->to;
+
+        if ($status !== $expected) {
+            throw new InvalidStateException(
+                "Data draf #$id tidak konsisten: statusnya {$status->label()}, "
+                . "tetapi riwayatnya berakhir di {$expected->label()}."
+            );
+        }
+
+        $draft = new self(
+            id: $id,
+            authorId: $authorId,
+            content: $content,
+            prompt: $prompt,
+            createdAt: $createdAt,
+            status: $status,
+            usage: $usage,
+        );
+        $draft->history = $history;
+        $draft->touch($updatedAt);
+
+        return $draft;
+    }
+
     public function content(): Content
     {
         return $this->content;

@@ -9,10 +9,13 @@ use InvalidArgumentException;
 use KurasiAI\Domain\DraftStatus;
 use KurasiAI\Exception\AccessDeniedException;
 use KurasiAI\Exception\AiProviderException;
+use KurasiAI\Exception\ConfigException;
 use KurasiAI\Exception\InvalidStateException;
 use KurasiAI\Exception\InvalidTransitionException;
 use KurasiAI\Exception\KurasiException;
+use KurasiAI\Exception\NotFoundException;
 use KurasiAI\Exception\ValidationException;
+use OutOfBoundsException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -38,6 +41,8 @@ class ExceptionTest extends TestCase
                 InvalidStateException::class,
             ],
             'mesin AI gagal' => [new AiProviderException('x'), RuntimeException::class],
+            'konfigurasi salah' => [new ConfigException('x'), RuntimeException::class],
+            'data tidak ditemukan' => [new NotFoundException('Draf', 12), OutOfBoundsException::class],
         ];
     }
 
@@ -49,6 +54,14 @@ class ExceptionTest extends TestCase
     {
         $this->assertInstanceOf(KurasiException::class, $exception);
         $this->assertInstanceOf($parent, $exception);
+    }
+
+    public function testNotFoundNamesWhatIsMissing(): void
+    {
+        $exception = new NotFoundException('Draf', 12);
+
+        $this->assertSame('Draf #12 tidak ditemukan.', $exception->getMessage());
+        $this->assertSame(['Draf', 12], [$exception->entity, $exception->id]);
     }
 
     public function testInvalidTransitionDescribesBothStatuses(): void

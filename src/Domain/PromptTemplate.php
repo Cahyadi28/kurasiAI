@@ -6,12 +6,14 @@ namespace KurasiAI\Domain;
 
 use DateTimeImmutable;
 use KurasiAI\Domain\Content\ContentType;
+use KurasiAI\Exception\AccessDeniedException;
 use KurasiAI\Exception\ValidationException;
 use KurasiAI\Support\HasTimestamps;
 
 /**
  * Template prompt yang bisa dipakai ulang, misalnya
  * "Tulis artikel tentang {{topik}} untuk {{pembaca}}."
+ * Semua pengguna boleh memakainya; hanya pembuatnya yang boleh mengubahnya.
  */
 final class PromptTemplate
 {
@@ -25,6 +27,8 @@ final class PromptTemplate
     private string $text;
 
     public function __construct(
+        public readonly int $id,
+        public readonly int $createdBy,
         string $name,
         string $text,
         public readonly ContentType $targetType,
@@ -33,6 +37,29 @@ final class PromptTemplate
         $this->name = $this->validName($name);
         $this->text = $this->validText($text);
         $this->initializeTimestamps($createdAt);
+    }
+
+    /**
+     * Membangun ulang template yang sudah tersimpan. Hanya dipakai repository.
+     */
+    public static function restore(
+        int $id,
+        int $createdBy,
+        string $name,
+        string $text,
+        ContentType $targetType,
+        DateTimeImmutable $createdAt,
+        DateTimeImmutable $updatedAt,
+    ): self {
+        $template = new self($id, $createdBy, $name, $text, $targetType, $createdAt);
+        $template->touch($updatedAt);
+
+        return $template;
+    }
+
+    public function isCreatedBy(User $user): bool
+    {
+        return $user->id === $this->createdBy;
     }
 
     public function name(): string
@@ -85,8 +112,12 @@ final class PromptTemplate
         return new Prompt($text ?? '');
     }
 
-    public function update(string $name, string $text, DateTimeImmutable $at): void
+    public function update(User $actor, string $name, string $text, DateTimeImmutable $at): void
     {
+        if (!$this->isCreatedBy($actor)) {
+            throw new AccessDeniedException('Hanya pembuat template yang boleh mengubahnya.');
+        }
+
         $newName = $this->validName($name);
         $newText = $this->validText($text);
 

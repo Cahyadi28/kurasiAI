@@ -12,27 +12,31 @@ use KurasiAI\Domain\PromptTemplate;
 use KurasiAI\Domain\Role;
 use KurasiAI\Domain\User;
 use KurasiAI\Exception\ValidationException;
+use KurasiAI\Persistence\InMemoryDraftRepository;
 use KurasiAI\Service\DraftGenerator;
 use KurasiAI\Support\FixedClock;
-use KurasiAI\Support\IdSequence;
 use PHPUnit\Framework\TestCase;
 
 class DraftGeneratorTest extends TestCase
 {
     private FixedClock $clock;
+    private InMemoryDraftRepository $drafts;
+    private DraftGenerator $generator;
+    private User $author;
+    private PromptTemplate $template;
 
     protected function setUp(): void
     {
         $this->clock = FixedClock::at('2026-10-05 09:00');
+        $this->drafts = new InMemoryDraftRepository();
+        $this->generator = new DraftGenerator(new FakeAiProvider(), $this->drafts, $this->clock);
+        $this->author = new User(7, 'Rina', 'rina@contoh.id', Role::Writer);
+        $this->template = new PromptTemplate(1, 7, 'Caption', 'Buat caption tentang {{topik}}.', ContentType::Caption, $this->clock->now());
     }
 
-    public function testCreatesADraftFromATemplate(): void
+    public function testCreatesAndStoresADraftFromATemplate(): void
     {
-        $generator = new DraftGenerator(new FakeAiProvider(), new IdSequence(), $this->clock);
-        $author = new User(7, 'Rina', 'rina@contoh.id', Role::Writer);
-        $template = new PromptTemplate('Caption', 'Buat caption tentang {{topik}}.', ContentType::Caption, $this->clock->now());
-
-        $draft = $generator->generate($author, $template, ['topik' => 'hemat air']);
+        $draft = $this->generator->generate($this->author, $this->template, ['topik' => 'hemat air']);
 
         $this->assertSame(1, $draft->id);
         $this->assertSame(7, $draft->authorId);
@@ -41,34 +45,29 @@ class DraftGeneratorTest extends TestCase
         $this->assertNotNull($draft->usage);
         $this->assertSame(DraftStatus::Draft, $draft->status());
         $this->assertEquals($this->clock->now(), $draft->createdAt());
+        $this->assertSame($draft->title(), $this->drafts->get($draft->id)->title(), 'Draf baru langsung tersimpan.');
     }
 
-    public function testNumbersDraftsInOrder(): void
+    public function testNumbersComeFromTheRepository(): void
     {
-        $generator = new DraftGenerator(new FakeAiProvider(), new IdSequence(start: 10), $this->clock);
-        $author = new User(1, 'Rina', 'rina@contoh.id', Role::Writer);
-        $template = new PromptTemplate('Caption', 'Buat caption tentang {{topik}}.', ContentType::Caption, $this->clock->now());
+        $first = $this->generator->generate($this->author, $this->template, ['topik' => 'hemat air']);
+        $second = $this->generator->generate($this->author, $this->template, ['topik' => 'hemat listrik']);
 
-        $first = $generator->generate($author, $template, ['topik' => 'hemat air']);
-        $second = $generator->generate($author, $template, ['topik' => 'hemat listrik']);
-
-        $this->assertSame([10, 11], [$first->id, $second->id]);
+        $this->assertSame([1, 2], [$first->id, $second->id]);
     }
 
-    public function testFailedGenerationDoesNotUseUpANumber(): void
+    public function testFailedGenerationStoresNothing(): void
     {
-        $generator = new DraftGenerator(new FakeAiProvider(), new IdSequence(), $this->clock);
-        $author = new User(1, 'Rina', 'rina@contoh.id', Role::Writer);
-        $template = new PromptTemplate('Caption', 'Buat caption tentang {{topik}}.', ContentType::Caption, $this->clock->now());
-
         try {
-            $generator->generate($author, $template, []);
+            $this->generator->generate($this->author, $this->template, []);
             $this->fail('Template tanpa nilai variabel seharusnya ditolak.');
         } catch (ValidationException) {
             // memang diharapkan
         }
 
-        $draft = $generator->generate($author, $template, ['topik' => 'hemat air']);
+        $this->assertSame([], $this->drafts->listByAuthor($this->author->id));
+
+        $draft = $this->generator->generate($this->author, $this->template, ['topik' => 'hemat air']);
 
         $this->assertSame(1, $draft->id);
     }
