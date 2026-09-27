@@ -13,6 +13,7 @@ class Draft
 
     public function __construct(
         public readonly int $id,
+        public readonly int $authorId,
         private Content $content,
         public readonly Prompt $prompt,
         private DraftStatus $status = DraftStatus::Draft,
@@ -41,12 +42,19 @@ class Draft
         return $this->rejectionNote;
     }
 
+    public function isOwnedBy(User $user): bool
+    {
+        return $user->id === $this->authorId;
+    }
+
     /**
      * Mengganti konten dengan versi baru yang JENISNYA SAMA.
-     * Hanya boleh saat status Draf atau Ditolak.
+     * Hanya pemilik, dan hanya saat status Draf atau Ditolak.
      */
-    public function revise(Content $newContent): void
+    public function revise(User $actor, Content $newContent): void
     {
+        $this->ensureOwner($actor, 'merevisi draf');
+
         if (!$this->status->isEditable()) {
             throw new DomainException("Draf berstatus {$this->status->label()} tidak bisa direvisi.");
         }
@@ -62,18 +70,22 @@ class Draft
         $this->touch();
     }
 
-    public function submit(): void
+    public function submit(User $actor): void
     {
+        $this->ensureOwner($actor, 'mengirim draf ke review');
         $this->transitionTo(DraftStatus::InReview);
     }
 
-    public function approve(): void
+    public function approve(User $actor): void
     {
+        $this->ensureReviewer($actor);
         $this->transitionTo(DraftStatus::Approved);
     }
 
-    public function reject(string $note): void
+    public function reject(User $actor, string $note): void
     {
+        $this->ensureReviewer($actor);
+
         $note = trim($note);
 
         if ($note === '') {
@@ -84,9 +96,28 @@ class Draft
         $this->rejectionNote = $note;
     }
 
-    public function publish(): void
+    public function publish(User $actor): void
     {
+        $this->ensureOwner($actor, 'menerbitkan draf');
         $this->transitionTo(DraftStatus::Published);
+    }
+
+    private function ensureOwner(User $actor, string $action): void
+    {
+        if (!$this->isOwnedBy($actor)) {
+            throw new DomainException("Hanya penulis draf ini yang boleh $action.");
+        }
+    }
+
+    private function ensureReviewer(User $actor): void
+    {
+        if (!$actor->role->canReview()) {
+            throw new DomainException('Hanya Editor yang boleh mereview draf.');
+        }
+
+        if ($this->isOwnedBy($actor)) {
+            throw new DomainException('Editor tidak boleh mereview draf miliknya sendiri.');
+        }
     }
 
     /**
