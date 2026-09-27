@@ -8,4 +8,5 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/Prompt.php';
 require_once __DIR__ . '/src/TokenUsage.php';
+require_once __DIR__ . '/src/DraftStatus.php';
 require_once __DIR__ . '/src/Draft.php';

@@ -10,7 +10,7 @@ class DraftTest extends TestCase
     {
         $draft = $this->makeDraft();
 
-        $this->assertSame('draft', $draft->status());
+        $this->assertSame(DraftStatus::Draft, $draft->status());
     }
 
     public function testRejectsEmptyTitle(): void
@@ -59,6 +59,79 @@ class DraftTest extends TestCase
 
         $this->assertSame('Judul awal', $draft->title());
         $this->assertSame('Isi awal.', $draft->body());
+    }
+
+    public function testFollowsTheFullReviewFlow(): void
+    {
+        $draft = $this->makeDraft();
+
+        $draft->submit();
+        $this->assertSame(DraftStatus::InReview, $draft->status());
+
+        $draft->approve();
+        $this->assertSame(DraftStatus::Approved, $draft->status());
+
+        $draft->publish();
+        $this->assertSame(DraftStatus::Published, $draft->status());
+    }
+
+    public function testCannotSkipReview(): void
+    {
+        $draft = $this->makeDraft();
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('Draf berstatus Draf tidak bisa diubah menjadi Terbit.');
+
+        $draft->publish();
+    }
+
+    public function testRejectedTransitionKeepsTheOldStatus(): void
+    {
+        $draft = $this->makeDraft();
+
+        try {
+            $draft->approve();
+            $this->fail('Draf yang belum direview seharusnya tidak bisa disetujui.');
+        } catch (DomainException) {
+            // memang diharapkan
+        }
+
+        $this->assertSame(DraftStatus::Draft, $draft->status());
+    }
+
+    public function testRejectRequiresANote(): void
+    {
+        $draft = $this->makeDraft();
+        $draft->submit();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $draft->reject('   ');
+    }
+
+    public function testRejectedDraftCanBeRevisedAndResubmitted(): void
+    {
+        $draft = $this->makeDraft();
+        $draft->submit();
+        $draft->reject('Tambahkan contoh nyata.');
+
+        $this->assertSame(DraftStatus::Rejected, $draft->status());
+        $this->assertSame('Tambahkan contoh nyata.', $draft->rejectionNote());
+
+        $draft->revise(title: 'Energi surya', body: 'Isi baru dengan contoh nyata.');
+        $draft->submit();
+
+        $this->assertSame(DraftStatus::InReview, $draft->status());
+    }
+
+    public function testCannotReviseWhileInReview(): void
+    {
+        $draft = $this->makeDraft();
+        $draft->submit();
+
+        $this->expectException(DomainException::class);
+
+        $draft->revise(title: 'Judul baru', body: 'Isi baru.');
     }
 
     private function makeDraft(string $title = 'Energi surya', string $body = 'Isi draf.'): Draft

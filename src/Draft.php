@@ -9,7 +9,8 @@ class Draft
 {
     private string $title;
     private string $body;
-    private string $status;
+    private DraftStatus $status;
+    private ?string $rejectionNote = null;
 
     public function __construct(
         public readonly int $id,
@@ -17,7 +18,7 @@ class Draft
         string $body,
         public readonly string $type,
         public readonly Prompt $prompt,
-        string $status = 'draft',
+        DraftStatus $status = DraftStatus::Draft,
         public readonly ?TokenUsage $usage = null,
     ) {
         $this->title = $this->validTitle($title);
@@ -35,17 +36,26 @@ class Draft
         return $this->body;
     }
 
-    public function status(): string
+    public function status(): DraftStatus
     {
         return $this->status;
     }
 
+    public function rejectionNote(): ?string
+    {
+        return $this->rejectionNote;
+    }
+
     /**
-     * Mengganti judul dan isi. Keduanya diperiksa dulu, baru disimpan,
-     * sehingga draf tidak pernah setengah berubah.
+     * Mengganti judul dan isi. Hanya boleh saat status Draf atau Ditolak.
+     * Keduanya diperiksa dulu, baru disimpan, sehingga draf tidak pernah setengah berubah.
      */
     public function revise(string $title, string $body): void
     {
+        if (!$this->status->isEditable()) {
+            throw new DomainException("Draf berstatus {$this->status->label()} tidak bisa direvisi.");
+        }
+
         $newTitle = $this->validTitle($title);
         $newBody = $this->validBody($body);
 
@@ -53,25 +63,31 @@ class Draft
         $this->body = $newBody;
     }
 
-    /**
-     * Status belum diperiksa sama sekali. Aturan status dibangun di Bab 4.
-     */
-    public function changeStatus(string $newStatus): void
+    public function submit(): void
     {
-        $this->status = $newStatus;
+        $this->transitionTo(DraftStatus::InReview);
     }
 
-    public function statusLabel(): string
+    public function approve(): void
     {
-        $labels = [
-            'draft' => 'Draf',
-            'in_review' => 'Sedang direview',
-            'approved' => 'Disetujui',
-            'rejected' => 'Ditolak',
-            'published' => 'Terbit',
-        ];
+        $this->transitionTo(DraftStatus::Approved);
+    }
 
-        return $labels[$this->status] ?? $this->status;
+    public function reject(string $note): void
+    {
+        $note = trim($note);
+
+        if ($note === '') {
+            throw new InvalidArgumentException('Catatan penolakan wajib diisi.');
+        }
+
+        $this->transitionTo(DraftStatus::Rejected);
+        $this->rejectionNote = $note;
+    }
+
+    public function publish(): void
+    {
+        $this->transitionTo(DraftStatus::Published);
     }
 
     public function typeLabel(): string
@@ -97,6 +113,20 @@ class Draft
         }
 
         return rtrim(mb_substr($this->body, 0, $length)) . '...';
+    }
+
+    /**
+     * Satu-satunya tempat status diganti. Aturannya ditanyakan ke enum DraftStatus.
+     */
+    private function transitionTo(DraftStatus $target): void
+    {
+        if (!$this->status->canTransitionTo($target)) {
+            throw new DomainException(
+                "Draf berstatus {$this->status->label()} tidak bisa diubah menjadi {$target->label()}."
+            );
+        }
+
+        $this->status = $target;
     }
 
     private function validTitle(string $title): string
