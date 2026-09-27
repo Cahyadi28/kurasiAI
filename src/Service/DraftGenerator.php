@@ -8,17 +8,19 @@ use KurasiAI\Ai\AiProvider;
 use KurasiAI\Domain\Draft;
 use KurasiAI\Domain\PromptTemplate;
 use KurasiAI\Domain\User;
+use KurasiAI\Support\Clock;
 use KurasiAI\Support\IdSequence;
 
 /**
  * Membuat draf dari template: render prompt, minta AI, lalu bungkus menjadi Draft.
- * Semua kebutuhannya (AI dan penomoran) dikirim dari luar lewat constructor.
+ * Semua kebutuhannya (AI, penomoran, dan jam) dikirim dari luar lewat constructor.
  */
 final class DraftGenerator
 {
     public function __construct(
         private readonly AiProvider $ai,
         private readonly IdSequence $ids,
+        private readonly Clock $clock,
     ) {
     }
 
@@ -40,6 +42,7 @@ final class DraftGenerator
             authorId: $author->id,
             content: $content,
             prompt: $prompt,
+            createdAt: $this->clock->now(),
             usage: $result->usage,
         );
     }

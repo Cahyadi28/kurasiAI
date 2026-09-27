@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
+use DateTimeImmutable;
 use KurasiAI\Domain\Content\ContentType;
 use KurasiAI\Domain\PromptTemplate;
 use KurasiAI\Exception\ValidationException;
@@ -49,22 +50,25 @@ class PromptTemplateTest extends TestCase
     {
         $this->expectException(ValidationException::class);
 
-        new PromptTemplate('  ', 'Tulis tentang {{topik}}.', ContentType::Article);
+        new PromptTemplate('  ', 'Tulis tentang {{topik}}.', ContentType::Article, new DateTimeImmutable());
     }
 
     public function testUpdateChangesTextAndTouchesTimestamp(): void
     {
         $template = $this->makeTemplate('Tulis tentang {{topik}}.');
 
-        $template->update('Artikel singkat', 'Tulis artikel singkat tentang {{topik}}.');
+        $later = new DateTimeImmutable('2026-10-05 10:30');
+
+        $template->update('Artikel singkat', 'Tulis artikel singkat tentang {{topik}}.', $later);
 
         $this->assertSame('Artikel singkat', $template->name());
         $this->assertSame(['topik'], $template->variables());
-        $this->assertGreaterThanOrEqual($template->createdAt(), $template->updatedAt());
+        $this->assertEquals(new DateTimeImmutable('2026-10-05 09:00'), $template->createdAt());
+        $this->assertEquals($later, $template->updatedAt());
     }
 
     private function makeTemplate(string $text): PromptTemplate
     {
-        return new PromptTemplate('Artikel edukasi', $text, ContentType::Article);
+        return new PromptTemplate('Artikel edukasi', $text, ContentType::Article, new DateTimeImmutable('2026-10-05 09:00'));
     }
 }

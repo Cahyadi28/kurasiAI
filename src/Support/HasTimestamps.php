@@ -9,7 +9,7 @@ use DateTimeImmutable;
 /**
  * Catatan waktu dibuat dan terakhir diubah.
  * Class pemakai memanggil initializeTimestamps() di constructor
- * dan touch() setiap kali datanya berubah.
+ * dan touch() setiap kali datanya berubah. Waktunya selalu dikirim dari luar.
  */
 trait HasTimestamps
 {
@@ -26,16 +26,14 @@ trait HasTimestamps
         return $this->updatedAt;
     }
 
-    protected function initializeTimestamps(): void
+    protected function initializeTimestamps(DateTimeImmutable $now): void
     {
-        $now = new DateTimeImmutable();
-
         $this->createdAt = $now;
         $this->updatedAt = $now;
     }
 
-    protected function touch(): void
+    protected function touch(DateTimeImmutable $now): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = $now;
     }
 }

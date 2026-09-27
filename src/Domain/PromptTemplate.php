@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain;
 
+use DateTimeImmutable;
 use KurasiAI\Domain\Content\ContentType;
 use KurasiAI\Exception\ValidationException;
 use KurasiAI\Support\HasTimestamps;
@@ -27,10 +28,11 @@ final class PromptTemplate
         string $name,
         string $text,
         public readonly ContentType $targetType,
+        DateTimeImmutable $createdAt,
     ) {
         $this->name = $this->validName($name);
         $this->text = $this->validText($text);
-        $this->initializeTimestamps();
+        $this->initializeTimestamps($createdAt);
     }
 
     public function name(): string
@@ -83,14 +85,14 @@ final class PromptTemplate
         return new Prompt($text ?? '');
     }
 
-    public function update(string $name, string $text): void
+    public function update(string $name, string $text, DateTimeImmutable $at): void
     {
         $newName = $this->validName($name);
         $newText = $this->validText($text);
 
         $this->name = $newName;
         $this->text = $newText;
-        $this->touch();
+        $this->touch($at);
     }
 
     private function validName(string $name): string

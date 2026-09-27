@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
+use DateTimeImmutable;
 use KurasiAI\Domain\Content\Caption;
 use KurasiAI\Domain\Draft;
 use KurasiAI\Domain\DraftStatus;
@@ -71,11 +72,13 @@ class DraftPermissionTest extends TestCase
             'publish' => DraftStatus::Approved,
         };
 
+        $now = new DateTimeImmutable('2026-10-05 09:00');
         $draft = new Draft(
             id: 1,
             authorId: $author->id,
             content: new Caption('Hemat air', 'Matikan keran. #hematair'),
             prompt: new Prompt('Buat caption tentang hemat air.'),
+            createdAt: $now,
             status: $startStatus,
         );
 
@@ -84,11 +87,11 @@ class DraftPermissionTest extends TestCase
         }
 
         match ($action) {
-            'revise' => $draft->revise($actor, new Caption('Hemat air', 'Tutup keran rapat-rapat. #hematair')),
-            'submit' => $draft->submit($actor),
-            'approve' => $draft->approve($actor),
-            'reject' => $draft->reject($actor, 'Perlu data pendukung.'),
-            'publish' => $draft->publish($actor),
+            'revise' => $draft->revise($actor, new Caption('Hemat air', 'Tutup keran rapat-rapat. #hematair'), $now),
+            'submit' => $draft->submit($actor, $now),
+            'approve' => $draft->approve($actor, $now),
+            'reject' => $draft->reject($actor, 'Perlu data pendukung.', $now),
+            'publish' => $draft->publish($actor, $now),
         };
 
         $this->assertTrue($expectedAllowed);
