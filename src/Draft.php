@@ -3,37 +3,29 @@
 declare(strict_types=1);
 
 /**
- * Satu draf konten buatan AI.
+ * Satu draf konten buatan AI. Draf MEMILIKI sebuah Content; Draf bukan Content.
  */
 class Draft
 {
-    private string $title;
-    private string $body;
-    private DraftStatus $status;
     private ?string $rejectionNote = null;
 
     public function __construct(
         public readonly int $id,
-        string $title,
-        string $body,
-        public readonly string $type,
+        private Content $content,
         public readonly Prompt $prompt,
-        DraftStatus $status = DraftStatus::Draft,
+        private DraftStatus $status = DraftStatus::Draft,
         public readonly ?TokenUsage $usage = null,
     ) {
-        $this->title = $this->validTitle($title);
-        $this->body = $this->validBody($body);
-        $this->status = $status;
+    }
+
+    public function content(): Content
+    {
+        return $this->content;
     }
 
     public function title(): string
     {
-        return $this->title;
-    }
-
-    public function body(): string
-    {
-        return $this->body;
+        return $this->content->title;
     }
 
     public function status(): DraftStatus
@@ -47,20 +39,23 @@ class Draft
     }
 
     /**
-     * Mengganti judul dan isi. Hanya boleh saat status Draf atau Ditolak.
-     * Keduanya diperiksa dulu, baru disimpan, sehingga draf tidak pernah setengah berubah.
+     * Mengganti konten dengan versi baru yang JENISNYA SAMA.
+     * Hanya boleh saat status Draf atau Ditolak.
      */
-    public function revise(string $title, string $body): void
+    public function revise(Content $newContent): void
     {
         if (!$this->status->isEditable()) {
             throw new DomainException("Draf berstatus {$this->status->label()} tidak bisa direvisi.");
         }
 
-        $newTitle = $this->validTitle($title);
-        $newBody = $this->validBody($body);
+        if ($newContent->type() !== $this->content->type()) {
+            throw new InvalidArgumentException(
+                "Revisi harus tetap berupa {$this->content->type()->label()}, "
+                . "bukan {$newContent->type()->label()}."
+            );
+        }
 
-        $this->title = $newTitle;
-        $this->body = $newBody;
+        $this->content = $newContent;
     }
 
     public function submit(): void
@@ -90,31 +85,6 @@ class Draft
         $this->transitionTo(DraftStatus::Published);
     }
 
-    public function typeLabel(): string
-    {
-        $labels = [
-            'article' => 'Artikel',
-            'video_script' => 'Naskah Video',
-            'caption' => 'Caption',
-        ];
-
-        return $labels[$this->type] ?? $this->type;
-    }
-
-    public function wordCount(): int
-    {
-        return str_word_count($this->body);
-    }
-
-    public function summary(int $length = 50): string
-    {
-        if (mb_strlen($this->body) <= $length) {
-            return $this->body;
-        }
-
-        return rtrim(mb_substr($this->body, 0, $length)) . '...';
-    }
-
     /**
      * Satu-satunya tempat status diganti. Aturannya ditanyakan ke enum DraftStatus.
      */
@@ -127,31 +97,5 @@ class Draft
         }
 
         $this->status = $target;
-    }
-
-    private function validTitle(string $title): string
-    {
-        $title = trim($title);
-
-        if ($title === '') {
-            throw new InvalidArgumentException('Judul draf tidak boleh kosong.');
-        }
-
-        if (mb_strlen($title) > 150) {
-            throw new InvalidArgumentException('Judul draf maksimal 150 karakter.');
-        }
-
-        return $title;
-    }
-
-    private function validBody(string $body): string
-    {
-        $body = trim($body);
-
-        if ($body === '') {
-            throw new InvalidArgumentException('Isi draf tidak boleh kosong.');
-        }
-
-        return $body;
     }
 }

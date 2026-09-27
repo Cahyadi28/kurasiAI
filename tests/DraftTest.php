@@ -13,52 +13,33 @@ class DraftTest extends TestCase
         $this->assertSame(DraftStatus::Draft, $draft->status());
     }
 
-    public function testRejectsEmptyTitle(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Judul draf tidak boleh kosong.');
-
-        $this->makeDraft(title: '   ');
-    }
-
-    public function testRejectsTitleLongerThan150Characters(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        $this->makeDraft(title: str_repeat('a', 151));
-    }
-
-    public function testRejectsEmptyBody(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Isi draf tidak boleh kosong.');
-
-        $this->makeDraft(body: '');
-    }
-
-    public function testReviseReplacesTitleAndBody(): void
+    public function testTitleComesFromTheContent(): void
     {
         $draft = $this->makeDraft();
 
-        $draft->revise(title: 'Judul baru', body: 'Isi baru.');
-
-        $this->assertSame('Judul baru', $draft->title());
-        $this->assertSame('Isi baru.', $draft->body());
+        $this->assertSame('Energi surya', $draft->title());
+        $this->assertSame(ContentType::Article, $draft->content()->type());
     }
 
-    public function testRejectedRevisionChangesNothing(): void
+    public function testReviseReplacesTheContent(): void
     {
-        $draft = $this->makeDraft(title: 'Judul awal', body: 'Isi awal.');
+        $draft = $this->makeDraft();
+        $newContent = new Article('Energi surya di rumah', str_repeat('Isi baru. ', 40));
 
-        try {
-            $draft->revise(title: 'Judul baru', body: '');
-            $this->fail('Revisi dengan isi kosong seharusnya ditolak.');
-        } catch (InvalidArgumentException) {
-            // memang diharapkan
-        }
+        $draft->revise($newContent);
 
-        $this->assertSame('Judul awal', $draft->title());
-        $this->assertSame('Isi awal.', $draft->body());
+        $this->assertSame($newContent, $draft->content());
+        $this->assertSame('Energi surya di rumah', $draft->title());
+    }
+
+    public function testReviseMustKeepTheSameContentType(): void
+    {
+        $draft = $this->makeDraft();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Revisi harus tetap berupa Artikel, bukan Caption.');
+
+        $draft->revise(new Caption('Energi surya', 'Hemat listrik dengan panel surya. #energi'));
     }
 
     public function testFollowsTheFullReviewFlow(): void
@@ -118,7 +99,7 @@ class DraftTest extends TestCase
         $this->assertSame(DraftStatus::Rejected, $draft->status());
         $this->assertSame('Tambahkan contoh nyata.', $draft->rejectionNote());
 
-        $draft->revise(title: 'Energi surya', body: 'Isi baru dengan contoh nyata.');
+        $draft->revise(new Article('Energi surya', str_repeat('Isi baru dengan contoh nyata. ', 12)));
         $draft->submit();
 
         $this->assertSame(DraftStatus::InReview, $draft->status());
@@ -131,16 +112,14 @@ class DraftTest extends TestCase
 
         $this->expectException(DomainException::class);
 
-        $draft->revise(title: 'Judul baru', body: 'Isi baru.');
+        $draft->revise(new Article('Judul baru', str_repeat('Isi baru. ', 40)));
     }
 
-    private function makeDraft(string $title = 'Energi surya', string $body = 'Isi draf.'): Draft
+    private function makeDraft(): Draft
     {
         return new Draft(
             id: 1,
-            title: $title,
-            body: $body,
-            type: 'article',
+            content: new Article('Energi surya', str_repeat('Energi surya itu bersih. ', 15)),
             prompt: new Prompt('Tulis artikel tentang energi surya.'),
         );
     }
