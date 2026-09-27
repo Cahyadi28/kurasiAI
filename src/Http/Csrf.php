@@ -37,6 +37,16 @@ final class Csrf
         return $token;
     }
 
+    /**
+     * Membuat token baru, misalnya setelah login, supaya token dari sebelum login tidak berlaku lagi.
+     */
+    public function regenerate(): string
+    {
+        $this->session->remove(self::SESSION_KEY);
+
+        return $this->token();
+    }
+
     public function isValid(mixed $submitted): bool
     {
         $token = $this->session->get(self::SESSION_KEY);

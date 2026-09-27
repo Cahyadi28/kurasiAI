@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use KurasiAI\Domain\DraftStatus;
 use KurasiAI\Exception\AccessDeniedException;
 use KurasiAI\Exception\AiProviderException;
+use KurasiAI\Exception\AuthenticationException;
 use KurasiAI\Exception\ConfigException;
 use KurasiAI\Exception\InvalidStateException;
 use KurasiAI\Exception\InvalidTransitionException;
@@ -43,6 +44,7 @@ class ExceptionTest extends TestCase
             'mesin AI gagal' => [new AiProviderException('x'), RuntimeException::class],
             'konfigurasi salah' => [new ConfigException('x'), RuntimeException::class],
             'data tidak ditemukan' => [new NotFoundException('Draf', 12), OutOfBoundsException::class],
+            'login gagal' => [new AuthenticationException('x'), RuntimeException::class],
         ];
     }
 

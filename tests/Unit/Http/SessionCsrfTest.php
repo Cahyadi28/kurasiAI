@@ -16,14 +16,14 @@ class SessionCsrfTest extends TestCase
         $data = [];
         $session = new Session($data);
 
-        $session->set('acting_user_id', 2);
+        $session->set('theme', 'gelap');
 
-        $this->assertSame(['acting_user_id' => 2], $data);
-        $this->assertSame(2, $session->get('acting_user_id'));
+        $this->assertSame(['theme' => 'gelap'], $data);
+        $this->assertSame('gelap', $session->get('theme'));
 
-        $session->remove('acting_user_id');
+        $session->remove('theme');
 
-        $this->assertNull($session->get('acting_user_id'));
+        $this->assertNull($session->get('theme'));
     }
 
     public function testFlashMessagesAreShownOnce(): void
@@ -69,6 +69,29 @@ class SessionCsrfTest extends TestCase
         $data = [];
 
         $this->assertFalse((new Csrf(new Session($data)))->isValid(''));
+    }
+
+    public function testResetEmptiesTheSession(): void
+    {
+        $data = ['auth_user_id' => 1, 'theme' => 'gelap'];
+        $session = new Session($data);
+
+        $session->reset();
+
+        $this->assertSame([], $data);
+    }
+
+    public function testRegeneratedTokenReplacesTheOldOne(): void
+    {
+        $data = [];
+        $csrf = new Csrf(new Session($data));
+        $old = $csrf->token();
+
+        $new = $csrf->regenerate();
+
+        $this->assertNotSame($old, $new);
+        $this->assertFalse($csrf->isValid($old));
+        $this->assertTrue($csrf->isValid($new));
     }
 
     public function testVerifyRejectsFormWithoutToken(): void

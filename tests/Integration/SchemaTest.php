@@ -17,7 +17,7 @@ class SchemaTest extends DatabaseTestCase
             ->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
             ->fetchAll(\PDO::FETCH_COLUMN);
 
-        $this->assertSame(['drafts', 'prompt_templates', 'status_changes', 'usage_logs', 'users'], $tables);
+        $this->assertSame(['drafts', 'login_attempts', 'prompt_templates', 'status_changes', 'usage_logs', 'users'], $tables);
     }
 
     public function testEmailMustBeUnique(): void

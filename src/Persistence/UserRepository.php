@@ -70,6 +70,25 @@ final class UserRepository
     }
 
     /**
+     * Akun beserta hash password-nya, untuk login. Null bila email tidak terdaftar.
+     */
+    public function findCredentials(string $email): ?UserCredentials
+    {
+        $statement = $this->db->pdo()->prepare('SELECT ' . self::COLUMNS . ', password_hash FROM users WHERE email = :email');
+        $statement->execute(['email' => strtolower(trim($email))]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : new UserCredentials($this->toUser($row), (string) $row['password_hash']);
+    }
+
+    public function updatePasswordHash(int $userId, string $passwordHash): void
+    {
+        $this->db->pdo()
+            ->prepare('UPDATE users SET password_hash = :password_hash WHERE id = :id')
+            ->execute(['id' => $userId, 'password_hash' => $passwordHash]);
+    }
+
+    /**
      * @return list<User>
      */
     public function all(): array

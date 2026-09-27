@@ -15,12 +15,15 @@ use KurasiAI\Exception\NotFoundException;
 use KurasiAI\Exception\ValidationException;
 use KurasiAI\Http\Csrf;
 use KurasiAI\Http\Session;
+use KurasiAI\Http\SessionAuth;
 use KurasiAI\Http\View;
 use KurasiAI\Persistence\Database;
 use KurasiAI\Persistence\DraftRepository;
+use KurasiAI\Persistence\LoginAttemptRepository;
 use KurasiAI\Persistence\PromptTemplateRepository;
 use KurasiAI\Persistence\SqliteDraftRepository;
 use KurasiAI\Persistence\UserRepository;
+use KurasiAI\Service\AuthService;
 use KurasiAI\Service\DraftGenerator;
 use KurasiAI\Service\ReviewService;
 use KurasiAI\Support\Clock;
@@ -36,8 +39,6 @@ use Throwable;
  */
 final class App
 {
-    private const ACTING_USER_KEY = 'acting_user_id';
-
     private ?DateTimeZone $timezone = null;
     private ?Clock $clock = null;
     private ?Database $db = null;
@@ -47,6 +48,7 @@ final class App
     private ?Session $session = null;
     private ?Csrf $csrf = null;
     private ?View $view = null;
+    private ?SessionAuth $sessionAuth = null;
 
     private function __construct(
         public readonly Env $env,
@@ -146,7 +148,7 @@ final class App
     public function view(): View
     {
         if ($this->view === null) {
-            $this->view = new View($this->root . '/views', ['isLocal' => $this->isLocal()]);
+            $this->view = new View($this->root . '/views');
             // Kolom tersembunyi berisi token CSRF, siap ditempel di setiap form (variabel $csrfInput).
             $this->view->share('csrfInput', sprintf(
                 '<input type="hidden" name="%s" value="%s">',
@@ -158,49 +160,30 @@ final class App
         return $this->view;
     }
 
-    // ---- Pengguna aktif (SEMENTARA, diganti login di Bab 15) -------------------------
-
-    public function isLocal(): bool
+    public function auth(): AuthService
     {
-        return $this->env->get('APP_ENV') === 'local';
+        return new AuthService($this->users(), new LoginAttemptRepository($this->db()), $this->clock());
+    }
+
+    public function sessionAuth(): SessionAuth
+    {
+        return $this->sessionAuth ??= new SessionAuth($this->session(), $this->csrf(), $this->users(), $this->clock());
+    }
+
+    // ---- Pengguna yang sedang login -------------------------------------------------
+
+    /** Pengguna yang sedang login, atau null. */
+    public function user(): ?User
+    {
+        return $this->sessionAuth()->user();
     }
 
     /**
-     * Pengguna yang sedang "bertindak". Tanpa password, jadi hanya boleh di APP_ENV=local.
+     * Dipanggil di awal setiap halaman yang butuh login. Yang belum login diarahkan ke halaman masuk.
      */
-    public function currentUser(): User
+    public function requireUser(): User
     {
-        $this->ensureLocal();
-
-        $id = $this->session()->get(self::ACTING_USER_KEY);
-
-        if (is_int($id)) {
-            try {
-                return $this->users()->get($id);
-            } catch (NotFoundException) {
-                // Akun sudah tidak ada (misalnya database dibuat ulang): kembali ke akun pertama.
-                $this->session()->remove(self::ACTING_USER_KEY);
-            }
-        }
-
-        return $this->users()->all()[0] ?? throw new ConfigException('Belum ada akun. Jalankan dulu: php bin/seed.php');
-    }
-
-    public function actAs(int $userId): User
-    {
-        $this->ensureLocal();
-
-        $user = $this->users()->get($userId);
-        $this->session()->set(self::ACTING_USER_KEY, $user->id);
-
-        return $user;
-    }
-
-    private function ensureLocal(): void
-    {
-        if (!$this->isLocal()) {
-            throw new ConfigException('Menu "Bertindak sebagai" hanya untuk APP_ENV=local. Login tersedia mulai Bab 15.');
-        }
+        return $this->user() ?? $this->redirect('login.php');
     }
 
     // ---- Bantuan untuk halaman web --------------------------------------------------
@@ -220,7 +203,7 @@ final class App
     }
 
     /**
-     * Menampilkan halaman lengkap: tampilan, pengguna aktif, daftar akun, dan pesan flash.
+     * Menampilkan halaman lengkap: tampilan, pengguna yang login, dan pesan flash.
      *
      * @param array<string, mixed> $data
      */
@@ -228,8 +211,7 @@ final class App
     {
         echo $this->view()->render($view, [
             ...$data,
-            'currentUser' => $this->currentUser(),
-            'users' => $this->users()->all(),
+            'currentUser' => $this->user(),
             'flashes' => $this->session()->takeFlashes(),
         ]);
     }

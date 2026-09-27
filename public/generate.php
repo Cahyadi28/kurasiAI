@@ -10,7 +10,7 @@ use KurasiAI\Validation\ValidationErrors;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 App::run(dirname(__DIR__), function (App $app): void {
-    $user = $app->currentUser();
+    $user = $app->requireUser();
     $id = filter_var($_GET['template'] ?? null, FILTER_VALIDATE_INT);
     $template = $app->templates()->get($id === false ? 0 : $id);
 

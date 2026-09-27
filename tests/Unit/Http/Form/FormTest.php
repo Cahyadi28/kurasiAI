@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use KurasiAI\Domain\Content\ContentType;
 use KurasiAI\Domain\PromptTemplate;
 use KurasiAI\Http\Form\DraftForm;
+use KurasiAI\Http\Form\LoginForm;
 use KurasiAI\Http\Form\TemplateForm;
 use KurasiAI\Validation\Validator;
 use PHPUnit\Framework\TestCase;
@@ -68,5 +69,21 @@ class FormTest extends TestCase
         $errors = (new Validator())->validate(DraftForm::fromInput([]));
 
         $this->assertSame(['title' => ['Judul wajib diisi.'], 'body' => ['Isi wajib diisi.']], $errors->all());
+    }
+
+    public function testLoginFormKeepsSpacesInThePassword(): void
+    {
+        $form = LoginForm::fromInput(['email' => ' rina@kurasiai.test ', 'password' => ' rahasia ']);
+
+        $this->assertSame('rina@kurasiai.test', $form->email);
+        $this->assertSame(' rahasia ', $form->password, 'Spasi adalah bagian dari password.');
+    }
+
+    public function testLoginFormRequiresBothFields(): void
+    {
+        $errors = (new Validator())->validate(LoginForm::fromInput([]));
+
+        $this->assertSame('Email wajib diisi.', $errors->first('email'));
+        $this->assertSame('Password wajib diisi.', $errors->first('password'));
     }
 }

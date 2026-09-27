@@ -9,7 +9,7 @@ use KurasiAI\Persistence\SortDirection;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 App::run(dirname(__DIR__), function (App $app): void {
-    $user = $app->currentUser();
+    $user = $app->requireUser();
 
     // Pilihan urutan dari alamat (?sort=title&dir=asc) melewati whitelist enum (Bab 13).
     $sort = DraftSort::fromInput(is_string($_GET['sort'] ?? null) ? $_GET['sort'] : null);

@@ -56,4 +56,20 @@ class UserRepositoryTest extends DatabaseTestCase
 
         $this->users->get(9);
     }
+
+    public function testCredentialsAndPasswordHashUpdate(): void
+    {
+        $user = $this->users->add('Rina', 'rina@kurasiai.test', Role::Writer, 'hash-lama', new DateTimeImmutable());
+
+        $credentials = $this->users->findCredentials('RINA@kurasiai.test');
+
+        $this->assertNotNull($credentials);
+        $this->assertEquals($user, $credentials->user);
+        $this->assertSame('hash-lama', $credentials->passwordHash);
+        $this->assertNull($this->users->findCredentials('tidak-ada@kurasiai.test'));
+
+        $this->users->updatePasswordHash($user->id, 'hash-baru');
+
+        $this->assertSame('hash-baru', $this->users->findCredentials('rina@kurasiai.test')?->passwordHash);
+    }
 }

@@ -9,7 +9,7 @@ declare(strict_types=1);
  * @var string $pageTitle
  * @var string $content      hasil render tampilan halaman (sudah berupa HTML)
  * @var string $csrfInput    kolom tersembunyi berisi token CSRF (sudah berupa HTML)
- * @var bool $isLocal
+ * @var \KurasiAI\Domain\User|null $currentUser
  */
 ?>
 <!doctype html>
@@ -24,23 +24,15 @@ declare(strict_types=1);
 <main>
     <header class="topbar">
         <a href="index.php" class="brand">KurasiAI</a>
-        <nav>
-            <a href="index.php">Beranda</a>
-            <a href="template-form.php">Template baru</a>
-        </nav>
-        <?php if (isset($currentUser, $users) && $isLocal): ?>
-            <form method="post" action="act-as.php" class="act-as">
+        <?php if (isset($currentUser)): ?>
+            <nav>
+                <a href="index.php">Beranda</a>
+                <a href="template-form.php">Template baru</a>
+            </nav>
+            <form method="post" action="logout.php" class="account">
                 <?= $csrfInput ?>
-                <label>Bertindak sebagai <span class="badge">sementara</span>
-                    <select name="user_id">
-                        <?php foreach ($users as $user): ?>
-                            <option value="<?= $this->e($user->id) ?>"<?= $user->isSameAs($currentUser) ? ' selected' : '' ?>>
-                                <?= $this->e($user->name) ?> (<?= $this->e($user->role->label()) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <button type="submit" class="secondary">Ganti</button>
+                <span><?= $this->e($currentUser->name) ?> <span class="badge"><?= $this->e($currentUser->role->label()) ?></span></span>
+                <button type="submit" class="secondary">Keluar</button>
             </form>
         <?php endif; ?>
     </header>

@@ -25,4 +25,17 @@ final class FormInput
 
         return is_string($value) ? trim($value) : '';
     }
+
+    /**
+     * Seperti text(), tetapi TANPA membuang spasi: dipakai untuk password,
+     * karena spasi di awal atau akhir adalah bagian dari password.
+     *
+     * @param array<mixed> $input
+     */
+    public static function secret(array $input, string $key): string
+    {
+        $value = $input[$key] ?? '';
+
+        return is_string($value) ? $value : '';
+    }
 }

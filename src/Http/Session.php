@@ -6,7 +6,6 @@ namespace KurasiAI\Http;
 
 /**
  * Pembungkus data session. Di aplikasi datanya adalah $_SESSION; di tes cukup array biasa.
- * Login dan pergantian nomor session (session_regenerate_id) menyusul di Bab 15.
  */
 final class Session
 {
@@ -30,14 +29,47 @@ final class Session
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start([
-                'cookie_httponly' => true,   // cookie tidak bisa dibaca JavaScript
-                'cookie_samesite' => 'Lax',  // tidak ikut terkirim pada POST dari situs lain
-                'use_strict_mode' => true,   // tolak nomor session yang tidak dibuat server
-                'use_only_cookies' => true,  // nomor session tidak boleh lewat alamat URL
+                'name' => 'kurasiai_session',
+                'cookie_httponly' => true,       // cookie tidak bisa dibaca JavaScript
+                'cookie_samesite' => 'Lax',      // tidak ikut terkirim pada POST dari situs lain
+                'cookie_secure' => self::isHttps(), // lewat HTTPS, cookie hanya dikirim lewat HTTPS
+                'use_strict_mode' => true,       // tolak nomor session yang tidak dibuat server
+                'use_only_cookies' => true,      // nomor session tidak boleh lewat alamat URL
             ]);
         }
 
         return new self($_SESSION);
+    }
+
+    /**
+     * Mengganti nomor session dan membuang nomor lama. Wajib dipanggil saat hak akses berubah
+     * (login), supaya nomor yang mungkin sudah diketahui orang lain tidak lagi berlaku.
+     */
+    public function regenerate(): void
+    {
+        // Di tes (tanpa session PHP sungguhan) tidak ada nomor yang perlu diganti.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+    }
+
+    /**
+     * Mengosongkan semua data lalu memakai nomor session baru. Dipakai saat logout.
+     */
+    public function reset(): void
+    {
+        foreach (array_keys($this->data) as $key) {
+            unset($this->data[$key]);
+        }
+
+        $this->regenerate();
+    }
+
+    private static function isHttps(): bool
+    {
+        $https = $_SERVER['HTTPS'] ?? '';
+
+        return $https !== '' && $https !== 'off';
     }
 
     public function get(string $key, mixed $default = null): mixed

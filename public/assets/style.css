@@ -44,6 +44,8 @@ label {
 }
 
 input[type="text"],
+input[type="email"],
+input[type="password"],
 select {
     display: block;
     width: 100%;
@@ -118,13 +120,13 @@ a { color: #1f6feb; }
     flex: 1;
 }
 
-.act-as {
+.account {
     display: flex;
     gap: 8px;
-    align-items: end;
+    align-items: center;
 }
 
-.act-as label {
+.account span {
     margin: 0;
     font-size: 0.9em;
 }
@@ -192,4 +194,8 @@ td {
 
 .history {
     padding-left: 18px;
+}
+
+.login {
+    max-width: 420px;
 }

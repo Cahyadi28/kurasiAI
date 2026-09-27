@@ -63,3 +63,13 @@ CREATE TABLE usage_logs (
 );
 
 CREATE INDEX idx_usage_logs_user ON usage_logs (user_id);
+
+-- Percobaan login yang GAGAL (Bab 15), untuk membatasi tebak-tebakan password.
+-- Waktu disimpan sebagai detik sejak 1970 (Unix timestamp) supaya mudah dibandingkan.
+CREATE TABLE login_attempts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    email        TEXT    NOT NULL,
+    attempted_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_login_attempts_email ON login_attempts (email, attempted_at);
