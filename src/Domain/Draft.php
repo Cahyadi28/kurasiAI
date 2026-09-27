@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain;
 
-use DomainException;
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\Content;
+use KurasiAI\Exception\AccessDeniedException;
+use KurasiAI\Exception\InvalidStateException;
+use KurasiAI\Exception\InvalidTransitionException;
+use KurasiAI\Exception\ValidationException;
 use KurasiAI\Support\HasTimestamps;
 
 /**
@@ -63,11 +65,11 @@ class Draft
         $this->ensureOwner($actor, 'merevisi draf');
 
         if (!$this->status->isEditable()) {
-            throw new DomainException("Draf berstatus {$this->status->label()} tidak bisa direvisi.");
+            throw new InvalidStateException("Draf berstatus {$this->status->label()} tidak bisa direvisi.");
         }
 
         if ($newContent->type() !== $this->content->type()) {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 "Revisi harus tetap berupa {$this->content->type()->label()}, "
                 . "bukan {$newContent->type()->label()}."
             );
@@ -96,7 +98,7 @@ class Draft
         $note = trim($note);
 
         if ($note === '') {
-            throw new InvalidArgumentException('Catatan penolakan wajib diisi.');
+            throw new ValidationException('Catatan penolakan wajib diisi.');
         }
 
         $this->transitionTo(DraftStatus::Rejected);
@@ -112,19 +114,27 @@ class Draft
     private function ensureOwner(User $actor, string $action): void
     {
         if (!$this->isOwnedBy($actor)) {
-            throw new DomainException("Hanya penulis draf ini yang boleh $action.");
+            $this->deny("Hanya penulis draf ini yang boleh $action.");
         }
     }
 
     private function ensureReviewer(User $actor): void
     {
         if (!$actor->role->canReview()) {
-            throw new DomainException('Hanya Editor yang boleh mereview draf.');
+            $this->deny('Hanya Editor yang boleh mereview draf.');
         }
 
         if ($this->isOwnedBy($actor)) {
-            throw new DomainException('Editor tidak boleh mereview draf miliknya sendiri.');
+            $this->deny('Editor tidak boleh mereview draf miliknya sendiri.');
         }
+    }
+
+    /**
+     * Menolak tindakan karena pelaku tidak berhak. Method ini tidak pernah kembali.
+     */
+    private function deny(string $reason): never
+    {
+        throw new AccessDeniedException($reason);
     }
 
     /**
@@ -133,9 +143,7 @@ class Draft
     private function transitionTo(DraftStatus $target): void
     {
         if (!$this->status->canTransitionTo($target)) {
-            throw new DomainException(
-                "Draf berstatus {$this->status->label()} tidak bisa diubah menjadi {$target->label()}."
-            );
+            throw new InvalidTransitionException(from: $this->status, to: $target);
         }
 
         $this->status = $target;

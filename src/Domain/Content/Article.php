@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain\Content;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 final class Article extends Content
 {
@@ -16,7 +17,7 @@ final class Article extends Content
         parent::__construct($title, $body);
 
         if (mb_strlen($this->body) < self::MIN_BODY_LENGTH) {
-            throw new InvalidArgumentException('Isi artikel minimal ' . self::MIN_BODY_LENGTH . ' karakter.');
+            throw new ValidationException('Isi artikel minimal ' . self::MIN_BODY_LENGTH . ' karakter.');
         }
     }
 

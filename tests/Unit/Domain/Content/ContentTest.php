@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain\Content;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\Caption;
 use KurasiAI\Domain\Content\Content;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -25,7 +25,7 @@ class ContentTest extends TestCase
 
     public function testRejectsEmptyTitle(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Judul konten tidak boleh kosong.');
 
         new Caption('   ', 'Isi caption.');
@@ -33,14 +33,14 @@ class ContentTest extends TestCase
 
     public function testRejectsTitleLongerThan150Characters(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         new Caption(str_repeat('a', Content::MAX_TITLE_LENGTH + 1), 'Isi caption.');
     }
 
     public function testRejectsEmptyBody(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Isi konten tidak boleh kosong.');
 
         new Caption('Hemat air', '');

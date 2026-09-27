@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Prompt;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class PromptTest extends TestCase
@@ -19,14 +19,14 @@ class PromptTest extends TestCase
 
     public function testRejectsEmptyText(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         new Prompt('');
     }
 
     public function testRejectsWhitespaceOnlyText(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         new Prompt('     ');
     }
@@ -40,7 +40,7 @@ class PromptTest extends TestCase
 
     public function testRejectsMoreThan2000Characters(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         new Prompt(str_repeat('a', Prompt::MAX_LENGTH + 1));
     }

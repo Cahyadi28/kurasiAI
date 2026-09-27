@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
-use DomainException;
 use KurasiAI\Domain\Content\Caption;
 use KurasiAI\Domain\Draft;
 use KurasiAI\Domain\DraftStatus;
 use KurasiAI\Domain\Prompt;
 use KurasiAI\Domain\Role;
 use KurasiAI\Domain\User;
+use KurasiAI\Exception\AccessDeniedException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -80,7 +80,7 @@ class DraftPermissionTest extends TestCase
         );
 
         if (!$expectedAllowed) {
-            $this->expectException(DomainException::class);
+            $this->expectException(AccessDeniedException::class);
         }
 
         match ($action) {

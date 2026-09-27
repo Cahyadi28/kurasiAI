@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Support;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 /**
  * Pemberi nomor urut sederhana. Object ini dikirim ke siapa pun yang membutuhkannya,
@@ -17,7 +18,7 @@ final class IdSequence
     public function __construct(int $start = 1)
     {
         if ($start < 1) {
-            throw new InvalidArgumentException('Nomor awal minimal 1.');
+            throw new ValidationException('Nomor awal minimal 1.');
         }
 
         $this->last = $start - 1;

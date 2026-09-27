@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
-use DomainException;
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\Article;
 use KurasiAI\Domain\Content\Caption;
 use KurasiAI\Domain\Content\ContentType;
@@ -14,6 +12,10 @@ use KurasiAI\Domain\DraftStatus;
 use KurasiAI\Domain\Prompt;
 use KurasiAI\Domain\Role;
 use KurasiAI\Domain\User;
+use KurasiAI\Exception\AccessDeniedException;
+use KurasiAI\Exception\InvalidStateException;
+use KurasiAI\Exception\InvalidTransitionException;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class DraftTest extends TestCase
@@ -58,7 +60,7 @@ class DraftTest extends TestCase
     {
         $draft = $this->makeDraft();
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Revisi harus tetap berupa Artikel, bukan Caption.');
 
         $draft->revise($this->writer, new Caption('Energi surya', 'Hemat listrik dengan panel surya. #energi'));
@@ -79,10 +81,14 @@ class DraftTest extends TestCase
     {
         $draft = $this->makeDraft();
 
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('Draf berstatus Draf tidak bisa diubah menjadi Terbit.');
-
-        $draft->publish($this->writer);
+        try {
+            $draft->publish($this->writer);
+            $this->fail('Draf yang belum direview seharusnya tidak bisa diterbitkan.');
+        } catch (InvalidTransitionException $e) {
+            $this->assertSame('Draf berstatus Draf tidak bisa diubah menjadi Terbit.', $e->getMessage());
+            $this->assertSame(DraftStatus::Draft, $e->from);
+            $this->assertSame(DraftStatus::Published, $e->to);
+        }
     }
 
     public function testRejectRequiresANote(): void
@@ -90,7 +96,7 @@ class DraftTest extends TestCase
         $draft = $this->makeDraft();
         $draft->submit($this->writer);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         $draft->reject($this->editor, '   ');
     }
@@ -114,7 +120,7 @@ class DraftTest extends TestCase
         $draft = $this->makeDraft();
         $draft->submit($this->writer);
 
-        $this->expectException(DomainException::class);
+        $this->expectException(InvalidStateException::class);
 
         $draft->revise($this->writer, new Article('Judul baru', str_repeat('Isi baru. ', 40)));
     }
@@ -123,7 +129,7 @@ class DraftTest extends TestCase
     {
         $draft = $this->makeDraft();
 
-        $this->expectException(DomainException::class);
+        $this->expectException(AccessDeniedException::class);
         $this->expectExceptionMessage('Hanya Editor yang boleh mereview draf.');
 
         $draft->approve($this->writer);

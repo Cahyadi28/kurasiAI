@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain\Content;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 final class Caption extends Content
 {
@@ -16,11 +17,11 @@ final class Caption extends Content
         parent::__construct($title, $body);
 
         if (mb_strlen($this->body) > self::MAX_BODY_LENGTH) {
-            throw new InvalidArgumentException('Caption maksimal ' . self::MAX_BODY_LENGTH . ' karakter.');
+            throw new ValidationException('Caption maksimal ' . self::MAX_BODY_LENGTH . ' karakter.');
         }
 
         if (count($this->hashtags()) > self::MAX_HASHTAGS) {
-            throw new InvalidArgumentException('Caption maksimal ' . self::MAX_HASHTAGS . ' tagar.');
+            throw new ValidationException('Caption maksimal ' . self::MAX_HASHTAGS . ' tagar.');
         }
     }
 

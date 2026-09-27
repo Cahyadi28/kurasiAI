@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain\Content;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\Caption;
 use KurasiAI\Domain\Content\ContentType;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class CaptionTest extends TestCase
@@ -29,7 +29,7 @@ class CaptionTest extends TestCase
 
     public function testRejectsMoreThan2200Characters(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Caption maksimal 2200 karakter.');
 
         new Caption('Terlalu panjang', str_repeat('a', Caption::MAX_BODY_LENGTH + 1));
@@ -37,7 +37,7 @@ class CaptionTest extends TestCase
 
     public function testRejectsMoreThan30Hashtags(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Caption maksimal 30 tagar.');
 
         new Caption('Terlalu banyak tagar', trim(str_repeat('#tagar ', Caption::MAX_HASHTAGS + 1)));

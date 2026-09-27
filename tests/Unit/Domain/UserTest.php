@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Role;
 use KurasiAI\Domain\User;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class UserTest extends TestCase
@@ -21,14 +21,14 @@ class UserTest extends TestCase
 
     public function testRejectsEmptyName(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         new User(1, '   ', 'rina@contoh.id', Role::Writer);
     }
 
     public function testRejectsInvalidEmail(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Format email tidak valid.');
 
         new User(1, 'Rina', 'rina-di-contoh', Role::Writer);

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 /**
  * Pengguna KurasiAI: Penulis atau Editor.
@@ -26,13 +27,13 @@ final class User
         $email = strtolower(trim($email));
 
         if ($name === '' || mb_strlen($name) > self::MAX_NAME_LENGTH) {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 'Nama pengguna wajib diisi, maksimal ' . self::MAX_NAME_LENGTH . ' karakter.'
             );
         }
 
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-            throw new InvalidArgumentException('Format email tidak valid.');
+            throw new ValidationException('Format email tidak valid.');
         }
 
         $this->name = $name;

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain\Content;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 /**
  * Kerangka bersama semua jenis konten. Tidak bisa dibuat langsung dengan new;
@@ -23,15 +24,15 @@ abstract class Content
         $body = trim($body);
 
         if ($title === '') {
-            throw new InvalidArgumentException('Judul konten tidak boleh kosong.');
+            throw new ValidationException('Judul konten tidak boleh kosong.');
         }
 
         if (mb_strlen($title) > self::MAX_TITLE_LENGTH) {
-            throw new InvalidArgumentException('Judul konten maksimal ' . self::MAX_TITLE_LENGTH . ' karakter.');
+            throw new ValidationException('Judul konten maksimal ' . self::MAX_TITLE_LENGTH . ' karakter.');
         }
 
         if ($body === '') {
-            throw new InvalidArgumentException('Isi konten tidak boleh kosong.');
+            throw new ValidationException('Isi konten tidak boleh kosong.');
         }
 
         $this->title = $title;

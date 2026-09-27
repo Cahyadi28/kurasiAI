@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\ContentType;
+use KurasiAI\Exception\ValidationException;
 use KurasiAI\Support\HasTimestamps;
 
 /**
@@ -71,7 +71,7 @@ final class PromptTemplate
         }
 
         if ($missing !== []) {
-            throw new InvalidArgumentException('Variabel belum diisi: ' . implode(', ', $missing) . '.');
+            throw new ValidationException('Variabel belum diisi: ' . implode(', ', $missing) . '.');
         }
 
         $text = preg_replace_callback(
@@ -98,7 +98,7 @@ final class PromptTemplate
         $name = trim($name);
 
         if ($name === '' || mb_strlen($name) > self::MAX_NAME_LENGTH) {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 'Nama template wajib diisi, maksimal ' . self::MAX_NAME_LENGTH . ' karakter.'
             );
         }
@@ -111,7 +111,7 @@ final class PromptTemplate
         $text = trim($text);
 
         if ($text === '' || mb_strlen($text) > Prompt::MAX_LENGTH) {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 'Teks template wajib diisi, maksimal ' . Prompt::MAX_LENGTH . ' karakter.'
             );
         }

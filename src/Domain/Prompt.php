@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 /**
  * Value object: teks perintah yang dikirim ke AI.
@@ -20,11 +21,11 @@ class Prompt
         $text = trim($text);
 
         if ($text === '') {
-            throw new InvalidArgumentException('Prompt tidak boleh kosong.');
+            throw new ValidationException('Prompt tidak boleh kosong.');
         }
 
         if (mb_strlen($text) > self::MAX_LENGTH) {
-            throw new InvalidArgumentException('Prompt maksimal ' . self::MAX_LENGTH . ' karakter.');
+            throw new ValidationException('Prompt maksimal ' . self::MAX_LENGTH . ' karakter.');
         }
 
         $this->text = $text;

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Service;
 
-use InvalidArgumentException;
 use KurasiAI\Ai\FakeAiProvider;
 use KurasiAI\Domain\Content\Caption;
 use KurasiAI\Domain\Content\ContentType;
@@ -12,6 +11,7 @@ use KurasiAI\Domain\DraftStatus;
 use KurasiAI\Domain\PromptTemplate;
 use KurasiAI\Domain\Role;
 use KurasiAI\Domain\User;
+use KurasiAI\Exception\ValidationException;
 use KurasiAI\Service\DraftGenerator;
 use KurasiAI\Support\IdSequence;
 use PHPUnit\Framework\TestCase;
@@ -55,7 +55,7 @@ class DraftGeneratorTest extends TestCase
         try {
             $generator->generate($author, $template, []);
             $this->fail('Template tanpa nilai variabel seharusnya ditolak.');
-        } catch (InvalidArgumentException) {
+        } catch (ValidationException) {
             // memang diharapkan
         }
 

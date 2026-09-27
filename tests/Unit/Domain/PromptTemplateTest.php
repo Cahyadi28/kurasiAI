@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\ContentType;
 use KurasiAI\Domain\PromptTemplate;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class PromptTemplateTest extends TestCase
@@ -31,7 +31,7 @@ class PromptTemplateTest extends TestCase
     {
         $template = $this->makeTemplate('Tulis artikel tentang {{topik}} untuk {{pembaca}}.');
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Variabel belum diisi: topik, pembaca.');
 
         $template->render(['topik' => '   ']);
@@ -47,7 +47,7 @@ class PromptTemplateTest extends TestCase
 
     public function testRejectsEmptyName(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         new PromptTemplate('  ', 'Tulis tentang {{topik}}.', ContentType::Article);
     }

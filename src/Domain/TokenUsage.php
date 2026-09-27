@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 /**
  * Value object: jumlah token yang dipakai satu permintaan ke AI.
@@ -16,7 +17,7 @@ class TokenUsage
         public readonly int $output,
     ) {
         if ($input < 0 || $output < 0) {
-            throw new InvalidArgumentException('Jumlah token tidak boleh negatif.');
+            throw new ValidationException('Jumlah token tidak boleh negatif.');
         }
     }
 

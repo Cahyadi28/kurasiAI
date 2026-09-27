@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\TokenUsage;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class TokenUsageTest extends TestCase
@@ -48,7 +48,7 @@ class TokenUsageTest extends TestCase
 
     public function testRejectsNegativeTokens(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
 
         new TokenUsage(input: -1, output: 10);
     }

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain\Content;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\ContentType;
 use KurasiAI\Domain\Content\VideoScript;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class VideoScriptTest extends TestCase
@@ -21,7 +21,7 @@ class VideoScriptTest extends TestCase
 
     public function testRejectsFewerThanTwoScenes(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Naskah video minimal 2 adegan (satu adegan per baris).');
 
         new VideoScript('Belajar PHP', 'Hanya satu adegan panjang tanpa baris baru.');

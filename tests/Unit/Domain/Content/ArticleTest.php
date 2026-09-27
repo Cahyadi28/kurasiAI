@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace KurasiAI\Tests\Unit\Domain\Content;
 
-use InvalidArgumentException;
 use KurasiAI\Domain\Content\Article;
 use KurasiAI\Domain\Content\ContentType;
+use KurasiAI\Exception\ValidationException;
 use PHPUnit\Framework\TestCase;
 
 class ArticleTest extends TestCase
@@ -20,7 +20,7 @@ class ArticleTest extends TestCase
 
     public function testRejectsBodyShorterThan300Characters(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Isi artikel minimal 300 karakter.');
 
         new Article('Energi surya', str_repeat('a', Article::MIN_BODY_LENGTH - 1));

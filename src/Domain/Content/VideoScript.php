@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KurasiAI\Domain\Content;
 
-use InvalidArgumentException;
+use KurasiAI\Exception\ValidationException;
+
 
 final class VideoScript extends Content
 {
@@ -16,7 +17,7 @@ final class VideoScript extends Content
         parent::__construct($title, $body);
 
         if (count($this->scenes()) < self::MIN_SCENES) {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 'Naskah video minimal ' . self::MIN_SCENES . ' adegan (satu adegan per baris).'
             );
         }
