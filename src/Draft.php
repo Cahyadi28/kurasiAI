@@ -7,6 +7,8 @@ declare(strict_types=1);
  */
 class Draft
 {
+    use HasTimestamps;
+
     private ?string $rejectionNote = null;
 
     public function __construct(
@@ -16,6 +18,7 @@ class Draft
         private DraftStatus $status = DraftStatus::Draft,
         public readonly ?TokenUsage $usage = null,
     ) {
+        $this->initializeTimestamps();
     }
 
     public function content(): Content
@@ -56,6 +59,7 @@ class Draft
         }
 
         $this->content = $newContent;
+        $this->touch();
     }
 
     public function submit(): void
@@ -97,5 +101,6 @@ class Draft
         }
 
         $this->status = $target;
+        $this->touch();
     }
 }

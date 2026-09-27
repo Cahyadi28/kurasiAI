@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 final class Caption extends Content
 {
+    public const MAX_BODY_LENGTH = 2200;
+    public const MAX_HASHTAGS = 30;
+
     public function __construct(string $title, string $body)
     {
         parent::__construct($title, $body);
 
-        if (mb_strlen($this->body) > 2200) {
-            throw new InvalidArgumentException('Caption maksimal 2200 karakter.');
+        if (mb_strlen($this->body) > self::MAX_BODY_LENGTH) {
+            throw new InvalidArgumentException('Caption maksimal ' . self::MAX_BODY_LENGTH . ' karakter.');
         }
 
-        if (count($this->hashtags()) > 30) {
-            throw new InvalidArgumentException('Caption maksimal 30 tagar.');
+        if (count($this->hashtags()) > self::MAX_HASHTAGS) {
+            throw new InvalidArgumentException('Caption maksimal ' . self::MAX_HASHTAGS . ' tagar.');
         }
     }
 

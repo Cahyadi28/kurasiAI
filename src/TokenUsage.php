@@ -16,6 +16,28 @@ class TokenUsage
         }
     }
 
+    /**
+     * Named constructor: pemakaian nol, misalnya sebagai titik awal penjumlahan.
+     */
+    public static function zero(): self
+    {
+        return new self(input: 0, output: 0);
+    }
+
+    /**
+     * Menjumlahkan berapa pun pemakaian menjadi satu object baru.
+     */
+    public static function sum(TokenUsage ...$usages): self
+    {
+        $total = self::zero();
+
+        foreach ($usages as $usage) {
+            $total = $total->add($usage);
+        }
+
+        return $total;
+    }
+
     public function total(): int
     {
         return $this->input + $this->output;

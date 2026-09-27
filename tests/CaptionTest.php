@@ -17,9 +17,9 @@ class CaptionTest extends TestCase
 
     public function testAcceptsExactly2200Characters(): void
     {
-        $caption = new Caption('Panjang', str_repeat('a', 2200));
+        $caption = new Caption('Panjang', str_repeat('a', Caption::MAX_BODY_LENGTH));
 
-        $this->assertSame(2200, mb_strlen($caption->body));
+        $this->assertSame(Caption::MAX_BODY_LENGTH, mb_strlen($caption->body));
     }
 
     public function testRejectsMoreThan2200Characters(): void
@@ -27,7 +27,7 @@ class CaptionTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Caption maksimal 2200 karakter.');
 
-        new Caption('Terlalu panjang', str_repeat('a', 2201));
+        new Caption('Terlalu panjang', str_repeat('a', Caption::MAX_BODY_LENGTH + 1));
     }
 
     public function testRejectsMoreThan30Hashtags(): void
@@ -35,6 +35,6 @@ class CaptionTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Caption maksimal 30 tagar.');
 
-        new Caption('Terlalu banyak tagar', trim(str_repeat('#tagar ', 31)));
+        new Caption('Terlalu banyak tagar', trim(str_repeat('#tagar ', Caption::MAX_HASHTAGS + 1)));
     }
 }

@@ -115,6 +115,17 @@ class DraftTest extends TestCase
         $draft->revise(new Article('Judul baru', str_repeat('Isi baru. ', 40)));
     }
 
+    public function testRecordsWhenItWasCreatedAndUpdated(): void
+    {
+        $draft = $this->makeDraft();
+
+        $this->assertEquals($draft->createdAt(), $draft->updatedAt());
+
+        $draft->submit();
+
+        $this->assertGreaterThanOrEqual($draft->createdAt(), $draft->updatedAt());
+    }
+
     private function makeDraft(): Draft
     {
         return new Draft(

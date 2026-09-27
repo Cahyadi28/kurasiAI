@@ -8,6 +8,8 @@ declare(strict_types=1);
  */
 abstract class Content
 {
+    public const MAX_TITLE_LENGTH = 150;
+
     public readonly string $title;
     public readonly string $body;
 
@@ -20,8 +22,8 @@ abstract class Content
             throw new InvalidArgumentException('Judul konten tidak boleh kosong.');
         }
 
-        if (mb_strlen($title) > 150) {
-            throw new InvalidArgumentException('Judul konten maksimal 150 karakter.');
+        if (mb_strlen($title) > self::MAX_TITLE_LENGTH) {
+            throw new InvalidArgumentException('Judul konten maksimal ' . self::MAX_TITLE_LENGTH . ' karakter.');
         }
 
         if ($body === '') {

@@ -18,14 +18,14 @@ class ArticleTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Isi artikel minimal 300 karakter.');
 
-        new Article('Energi surya', str_repeat('a', 299));
+        new Article('Energi surya', str_repeat('a', Article::MIN_BODY_LENGTH - 1));
     }
 
     public function testAcceptsExactly300Characters(): void
     {
-        $article = new Article('Energi surya', str_repeat('a', 300));
+        $article = new Article('Energi surya', str_repeat('a', Article::MIN_BODY_LENGTH));
 
-        $this->assertSame(300, mb_strlen($article->body));
+        $this->assertSame(Article::MIN_BODY_LENGTH, mb_strlen($article->body));
     }
 
     public function testEstimatesReadingTimeAt200WordsPerMinute(): void

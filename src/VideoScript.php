@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 final class VideoScript extends Content
 {
+    public const MIN_SCENES = 2;
+    public const WORDS_PER_MINUTE = 150;
+
     public function __construct(string $title, string $body)
     {
         parent::__construct($title, $body);
 
-        if (count($this->scenes()) < 2) {
-            throw new InvalidArgumentException('Naskah video minimal 2 adegan (satu adegan per baris).');
+        if (count($this->scenes()) < self::MIN_SCENES) {
+            throw new InvalidArgumentException(
+                'Naskah video minimal ' . self::MIN_SCENES . ' adegan (satu adegan per baris).'
+            );
         }
     }
 
@@ -31,11 +36,11 @@ final class VideoScript extends Content
     }
 
     /**
-     * Perkiraan durasi, dengan anggapan pembawa acara berbicara 150 kata per menit.
+     * Perkiraan durasi berdasarkan kecepatan bicara pembawa acara.
      */
     public function estimatedSeconds(): int
     {
-        return (int) ceil($this->wordCount() / 150 * 60);
+        return (int) ceil($this->wordCount() / self::WORDS_PER_MINUTE * 60);
     }
 
     public function metaLabel(): string

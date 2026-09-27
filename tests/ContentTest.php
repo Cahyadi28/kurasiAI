@@ -30,7 +30,7 @@ class ContentTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new Caption(str_repeat('a', 151), 'Isi caption.');
+        new Caption(str_repeat('a', Content::MAX_TITLE_LENGTH + 1), 'Isi caption.');
     }
 
     public function testRejectsEmptyBody(): void

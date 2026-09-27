@@ -6,6 +6,7 @@ declare(strict_types=1);
 // Setiap class baru harus ditambahkan di sini. Mulai Bab 9, berkas ini
 // digantikan oleh autoload Composer.
 
+require_once __DIR__ . '/src/HasTimestamps.php';
 require_once __DIR__ . '/src/Prompt.php';
 require_once __DIR__ . '/src/TokenUsage.php';
 require_once __DIR__ . '/src/DraftStatus.php';
@@ -18,3 +19,4 @@ require_once __DIR__ . '/src/Draft.php';
 require_once __DIR__ . '/src/AiResult.php';
 require_once __DIR__ . '/src/AiProvider.php';
 require_once __DIR__ . '/src/FakeAiProvider.php';
+require_once __DIR__ . '/src/PromptTemplate.php';

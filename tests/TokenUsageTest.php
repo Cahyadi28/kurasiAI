@@ -25,6 +25,23 @@ class TokenUsageTest extends TestCase
         $this->assertNotSame($first, $sum);
     }
 
+    public function testZeroHasNoTokens(): void
+    {
+        $this->assertSame(0, TokenUsage::zero()->total());
+    }
+
+    public function testSumAddsAnyNumberOfUsages(): void
+    {
+        $sum = TokenUsage::sum(
+            new TokenUsage(input: 14, output: 42),
+            new TokenUsage(input: 10, output: 30),
+            new TokenUsage(input: 1, output: 3),
+        );
+
+        $this->assertTrue($sum->equals(new TokenUsage(input: 25, output: 75)));
+        $this->assertSame(0, TokenUsage::sum()->total());
+    }
+
     public function testRejectsNegativeTokens(): void
     {
         $this->expectException(InvalidArgumentException::class);

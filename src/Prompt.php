@@ -7,6 +7,8 @@ declare(strict_types=1);
  */
 class Prompt
 {
+    public const MAX_LENGTH = 2000;
+
     public readonly string $text;
 
     public function __construct(string $text)
@@ -17,8 +19,8 @@ class Prompt
             throw new InvalidArgumentException('Prompt tidak boleh kosong.');
         }
 
-        if (mb_strlen($text) > 2000) {
-            throw new InvalidArgumentException('Prompt maksimal 2000 karakter.');
+        if (mb_strlen($text) > self::MAX_LENGTH) {
+            throw new InvalidArgumentException('Prompt maksimal ' . self::MAX_LENGTH . ' karakter.');
         }
 
         $this->text = $text;
