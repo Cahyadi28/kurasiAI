@@ -19,4 +19,16 @@ enum ContentType: string
             self::Caption => 'Caption',
         };
     }
+
+    /**
+     * Membuat object konten dari class yang sesuai dengan jenis ini.
+     */
+    public function createContent(string $title, string $body): Content
+    {
+        return match ($this) {
+            self::Article => new Article($title, $body),
+            self::VideoScript => new VideoScript($title, $body),
+            self::Caption => new Caption($title, $body),
+        };
+    }
 }

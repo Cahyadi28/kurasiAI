@@ -15,3 +15,6 @@ require_once __DIR__ . '/src/Article.php';
 require_once __DIR__ . '/src/VideoScript.php';
 require_once __DIR__ . '/src/Caption.php';
 require_once __DIR__ . '/src/Draft.php';
+require_once __DIR__ . '/src/AiResult.php';
+require_once __DIR__ . '/src/AiProvider.php';
+require_once __DIR__ . '/src/FakeAiProvider.php';
