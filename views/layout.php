@@ -18,18 +18,22 @@ declare(strict_types=1);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $this->e($pageTitle) ?> · KurasiAI</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
 <main>
     <header class="topbar">
-        <a href="index.php" class="brand">KurasiAI</a>
+        <a href="/" class="brand">KurasiAI</a>
         <?php if (isset($currentUser)): ?>
             <nav>
-                <a href="index.php">Beranda</a>
-                <a href="template-form.php">Template baru</a>
+                <a href="/">Beranda</a>
+                <a href="/templates/new">Template baru</a>
+                <?php if ($currentUser->role->canReview()): ?>
+                    <a href="/review">Antrean review</a>
+                <?php endif; ?>
+                <a href="/usage">Log pemakaian</a>
             </nav>
-            <form method="post" action="logout.php" class="account">
+            <form method="post" action="/logout" class="account">
                 <?= $csrfInput ?>
                 <span><?= $this->e($currentUser->name) ?> <span class="badge"><?= $this->e($currentUser->role->label()) ?></span></span>
                 <button type="submit" class="secondary">Keluar</button>
@@ -39,6 +43,9 @@ declare(strict_types=1);
 
     <?php foreach ($flashes ?? [] as $flash): ?>
         <p class="flash"><?= $this->e($flash) ?></p>
+    <?php endforeach; ?>
+    <?php foreach ($flashErrors ?? [] as $flashError): ?>
+        <p class="errors"><?= $this->e($flashError) ?></p>
     <?php endforeach; ?>
 
     <?= $content ?>

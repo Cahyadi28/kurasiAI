@@ -12,5 +12,5 @@ declare(strict_types=1);
 <section class="card">
     <h1><?= $this->e($pageTitle) ?> <small><?= $this->e($status) ?></small></h1>
     <p><?= $this->e($message) ?></p>
-    <p><a href="index.php">Kembali ke beranda</a></p>
+    <p><a href="/">Kembali ke beranda</a></p>
 </section>

@@ -16,6 +16,8 @@ use KurasiAI\Exception\InvalidTransitionException;
 use KurasiAI\Exception\KurasiException;
 use KurasiAI\Exception\NotFoundException;
 use KurasiAI\Exception\ValidationException;
+use KurasiAI\Http\HttpException;
+use KurasiAI\Http\LoginRequiredException;
 use OutOfBoundsException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -45,6 +47,8 @@ class ExceptionTest extends TestCase
             'konfigurasi salah' => [new ConfigException('x'), RuntimeException::class],
             'data tidak ditemukan' => [new NotFoundException('Draf', 12), OutOfBoundsException::class],
             'login gagal' => [new AuthenticationException('x'), RuntimeException::class],
+            'jawaban HTTP' => [new HttpException(404, 'x'), RuntimeException::class],
+            'perlu login' => [new LoginRequiredException(), RuntimeException::class],
         ];
     }
 

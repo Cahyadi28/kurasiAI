@@ -18,7 +18,7 @@ use KurasiAI\Validation\ValidationErrors;
     <p class="errors"><?= $this->e($errors->first(ValidationErrors::FORM)) ?></p>
 <?php endif; ?>
 
-<form method="post" action="generate.php?template=<?= $this->e($template->id) ?>" class="card">
+<form method="post" action="/templates/<?= $this->e($template->id) ?>/generate" class="card">
     <?= $csrfInput ?>
 
     <p class="hint">Prompt: <?= $this->e($template->text()) ?></p>

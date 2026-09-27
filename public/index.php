@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-use KurasiAI\App;
-use KurasiAI\Persistence\DraftSort;
-use KurasiAI\Persistence\SortDirection;
+/**
+ * Front controller: SATU-SATUNYA pintu masuk aplikasi. Semua alamat (/, /drafts/12, /login, ...)
+ * diarahkan ke berkas ini, lalu router memilih controller yang tepat.
+ *
+ * Menjalankan di komputer sendiri:  php -S localhost:8000 -t public public/index.php
+ */
+
+// Server bawaan PHP (php -S): berkas yang benar-benar ada di public/, seperti CSS,
+// dilayani langsung oleh server. Dicek dengan realpath() supaya "../" tidak bisa keluar dari public/.
+if (PHP_SAPI === 'cli-server') {
+    $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+    $file = is_string($path) ? realpath(__DIR__ . $path) : false;
+
+    if ($file !== false && is_file($file) && str_starts_with($file, __DIR__ . DIRECTORY_SEPARATOR)) {
+        return false;
+    }
+}
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-App::run(dirname(__DIR__), function (App $app): void {
-    $user = $app->requireUser();
-
-    // Pilihan urutan dari alamat (?sort=title&dir=asc) melewati whitelist enum (Bab 13).
-    $sort = DraftSort::fromInput(is_string($_GET['sort'] ?? null) ? $_GET['sort'] : null);
-    $direction = SortDirection::fromInput(is_string($_GET['dir'] ?? null) ? $_GET['dir'] : null);
-
-    $app->render('home', [
-        'pageTitle' => 'Beranda',
-        'templates' => $app->templates()->all(),
-        'drafts' => $app->drafts()->listByAuthor($user->id, $sort, $direction),
-        'sort' => $sort,
-        'direction' => $direction,
-    ]);
-});
+KurasiAI\App::run(dirname(__DIR__));

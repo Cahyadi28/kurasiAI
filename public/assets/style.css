@@ -116,8 +116,13 @@ a { color: #1f6feb; }
 
 .topbar nav {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 6px 14px;
     flex: 1;
+}
+
+.topbar nav a {
+    white-space: nowrap;
 }
 
 .account {
@@ -198,4 +203,17 @@ td {
 
 .login {
     max-width: 420px;
+}
+
+button.danger {
+    background: #cf222e;
+}
+
+.review-actions .actions {
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.reject-form textarea {
+    min-height: 0;
 }

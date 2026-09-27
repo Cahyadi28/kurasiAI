@@ -14,6 +14,12 @@ use KurasiAI\Exception\KurasiException;
 use KurasiAI\Exception\NotFoundException;
 use KurasiAI\Exception\ValidationException;
 use KurasiAI\Http\Csrf;
+use KurasiAI\Http\HttpException;
+use KurasiAI\Http\LoginRequiredException;
+use KurasiAI\Http\Request;
+use KurasiAI\Http\Response;
+use KurasiAI\Http\Router;
+use KurasiAI\Http\Routes;
 use KurasiAI\Http\Session;
 use KurasiAI\Http\SessionAuth;
 use KurasiAI\Http\View;
@@ -22,6 +28,7 @@ use KurasiAI\Persistence\DraftRepository;
 use KurasiAI\Persistence\LoginAttemptRepository;
 use KurasiAI\Persistence\PromptTemplateRepository;
 use KurasiAI\Persistence\SqliteDraftRepository;
+use KurasiAI\Persistence\UsageLogRepository;
 use KurasiAI\Persistence\UserRepository;
 use KurasiAI\Service\AuthService;
 use KurasiAI\Service\DraftGenerator;
@@ -33,9 +40,9 @@ use KurasiAI\Validation\Validator;
 use Throwable;
 
 /**
- * Tempat merakit seluruh objek aplikasi (composition root).
+ * Tempat merakit seluruh objek aplikasi (composition root), sekaligus kernel web:
+ * menerima Request, meneruskannya ke router, dan menerjemahkan exception menjadi Response.
  * Setiap objek dibuat saat pertama kali diminta, lalu dipakai ulang selama satu permintaan.
- * Mulai Bab 16, bagian yang mengurus permintaan web pindah ke router dan controller.
  */
 final class App
 {
@@ -58,28 +65,53 @@ final class App
 
     public static function fromEnvironment(string $root): self
     {
-        return new self(Env::fromFile($root . '/.env'), $root);
+        return self::fromEnv(Env::fromFile($root . '/.env'), $root);
+    }
+
+    public static function fromEnv(Env $env, string $root): self
+    {
+        return new self($env, $root);
     }
 
     /**
-     * Titik awal setiap halaman web: merakit App, lalu menjalankan isi halaman lewat handle().
-     *
-     * @param callable(self): void $page
+     * Dipanggil satu kali oleh front controller (public/index.php) untuk setiap permintaan.
      */
-    public static function run(string $root, callable $page): void
+    public static function run(string $root): void
     {
         try {
             $app = self::fromEnvironment($root);
         } catch (ConfigException $e) {
             // Tanpa .env belum ada tampilan maupun session; cukup teks biasa.
-            http_response_code(500);
-            header('Content-Type: text/plain; charset=utf-8');
-            echo 'Konfigurasi belum lengkap: ' . $e->getMessage();
+            (new Response('Konfigurasi belum lengkap: ' . $e->getMessage(), 500, ['Content-Type' => 'text/plain; charset=utf-8']))->send();
 
             return;
         }
 
-        $app->handle(fn () => $page($app));
+        $app->handle(Request::fromGlobals())->send();
+    }
+
+    // ---- Pengganti untuk tes --------------------------------------------------------
+
+    /** Tes memakai database :memory:, session berupa array, dan jam buatan. */
+    public function replaceDatabase(Database $db): self
+    {
+        $this->db = $db;
+
+        return $this;
+    }
+
+    public function replaceSession(Session $session): self
+    {
+        $this->session = $session;
+
+        return $this;
+    }
+
+    public function replaceClock(Clock $clock): self
+    {
+        $this->clock = $clock;
+
+        return $this;
     }
 
     // ---- Objek aplikasi -------------------------------------------------------------
@@ -130,6 +162,11 @@ final class App
         return new ReviewService($this->clock(), $this->drafts());
     }
 
+    public function usage(): UsageLogRepository
+    {
+        return new UsageLogRepository($this->db());
+    }
+
     public function validator(): Validator
     {
         return new Validator();
@@ -178,77 +215,78 @@ final class App
         return $this->sessionAuth()->user();
     }
 
-    /**
-     * Dipanggil di awal setiap halaman yang butuh login. Yang belum login diarahkan ke halaman masuk.
-     */
-    public function requireUser(): User
-    {
-        return $this->user() ?? $this->redirect('login.php');
-    }
+    // ---- Kernel web -----------------------------------------------------------------
 
-    // ---- Bantuan untuk halaman web --------------------------------------------------
-
-    public function isPost(): bool
+    public function router(): Router
     {
-        return ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
+        $router = new Router();
+        Routes::register($router, $this);
+
+        return $router;
     }
 
     /**
-     * Pindah ke halaman lain setelah POST berhasil (pola Post/Redirect/Get).
+     * Mengubah satu Request menjadi satu Response. Semua jenis masalah diterjemahkan di sini.
      */
-    public function redirect(string $path): never
+    public function handle(Request $request): Response
     {
-        header('Location: ' . $path, true, 303);
-        exit;
-    }
-
-    /**
-     * Menampilkan halaman lengkap: tampilan, pengguna yang login, dan pesan flash.
-     *
-     * @param array<string, mixed> $data
-     */
-    public function render(string $view, array $data = []): void
-    {
-        echo $this->view()->render($view, [
-            ...$data,
-            'currentUser' => $this->user(),
-            'flashes' => $this->session()->takeFlashes(),
-        ]);
-    }
-
-    /**
-     * Menjalankan isi halaman dan menerjemahkan setiap jenis masalah menjadi respons yang tepat.
-     */
-    public function handle(callable $page): void
-    {
-        // Pertahanan tambahan: browser menolak skrip dari luar situs dan halaman dibingkai situs lain.
-        header("Content-Security-Policy: default-src 'self'");
-        header('X-Frame-Options: DENY');
-        header('X-Content-Type-Options: nosniff');
-
         try {
-            $page();
+            $response = $this->router()->dispatch($request);
+        } catch (LoginRequiredException) {
+            $this->session()->flash('Silakan masuk dulu.');
+            $response = Response::redirect('/login');
+        } catch (HttpException $e) {
+            $response = $this->error($e->status, $e->status === 404 ? 'Tidak ditemukan' : 'Permintaan tidak sah', $e->getMessage());
+
+            foreach ($e->headers as $name => $value) {
+                $response = $response->withHeader($name, $value);
+            }
         } catch (NotFoundException $e) {
-            $this->error(404, 'Tidak ditemukan', $e->getMessage());
+            $response = $this->error(404, 'Tidak ditemukan', $e->getMessage());
         } catch (AccessDeniedException $e) {
-            $this->error(403, 'Akses ditolak', $e->getMessage());
+            $response = $this->error(403, 'Akses ditolak', $e->getMessage());
         } catch (InvalidStateException $e) {
-            $this->error(409, 'Belum bisa dilakukan', $e->getMessage());
+            $response = $this->error(409, 'Belum bisa dilakukan', $e->getMessage());
         } catch (ValidationException $e) {
-            $this->error(422, 'Permintaan tidak sah', $e->getMessage());
+            $response = $this->error(422, 'Permintaan tidak sah', $e->getMessage());
         } catch (KurasiException $e) {
-            $this->error(500, 'Terjadi masalah', $e->getMessage());
+            $response = $this->error(500, 'Terjadi masalah', $e->getMessage());
         } catch (Throwable $e) {
             // Masalah tak terduga (misalnya PDOException): detailnya hanya dicatat di log server,
             // pengguna cukup melihat pesan umum. Detail teknis bisa membocorkan isi aplikasi.
             error_log((string) $e);
-            $this->error(500, 'Terjadi masalah', 'Terjadi kesalahan di server. Coba lagi nanti.');
+            $response = $this->error(500, 'Terjadi masalah', 'Terjadi kesalahan di server. Coba lagi nanti.');
         }
+
+        // Pertahanan tambahan: browser menolak skrip dari luar situs dan halaman dibingkai situs lain.
+        return $response
+            ->withHeader('Content-Security-Policy', "default-src 'self'")
+            ->withHeader('X-Frame-Options', 'DENY')
+            ->withHeader('X-Content-Type-Options', 'nosniff');
     }
 
-    private function error(int $status, string $title, string $message): void
+    /**
+     * Halaman lengkap: tampilan, pengguna yang login, dan pesan flash.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function page(string $view, array $data = [], int $status = 200): Response
     {
-        http_response_code($status);
-        echo $this->view()->render('error', ['pageTitle' => $title, 'status' => $status, 'message' => $message]);
+        return new Response($this->view()->render($view, [
+            ...$data,
+            'currentUser' => $this->user(),
+            'flashes' => $this->session()->takeFlashes(),
+            'flashErrors' => $this->session()->takeErrors(),
+        ]), $status);
+    }
+
+    private function error(int $status, string $title, string $message): Response
+    {
+        try {
+            return $this->page('error', ['pageTitle' => $title, 'status' => $status, 'message' => $message], $status);
+        } catch (Throwable) {
+            // Tampilan pun gagal (misalnya database rusak saat membaca pengguna): cukup teks biasa.
+            return new Response("$title: $message", $status, ['Content-Type' => 'text/plain; charset=utf-8']);
+        }
     }
 }

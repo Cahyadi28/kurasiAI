@@ -18,7 +18,7 @@ use KurasiAI\Validation\ValidationErrors;
     <p class="errors"><?= $this->e($errors->first(ValidationErrors::FORM)) ?></p>
 <?php endif; ?>
 
-<form method="post" action="login.php" class="card login">
+<form method="post" action="/login" class="card login">
     <?= $csrfInput ?>
 
     <label>Email

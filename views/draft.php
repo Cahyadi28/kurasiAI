@@ -9,6 +9,7 @@ use KurasiAI\Validation\ValidationErrors;
  * @var \KurasiAI\Http\View $this
  * @var \KurasiAI\Domain\Draft $draft
  * @var bool $canEdit
+ * @var array{submit: bool, approve: bool, reject: bool, publish: bool} $actions
  * @var \KurasiAI\Http\Form\DraftForm $form
  * @var ValidationErrors $errors
  * @var array<int, string> $names   nama pengguna berdasarkan nomornya
@@ -36,12 +37,47 @@ use KurasiAI\Validation\ValidationErrors;
     <?php endif; ?>
 </section>
 
+<?php if (in_array(true, $actions, true)): ?>
+    <section class="card review-actions">
+        <h2>Tindakan</h2>
+        <div class="actions">
+            <?php if ($actions['submit']): ?>
+                <form method="post" action="/drafts/<?= $this->e($draft->id) ?>/submit">
+                    <?= $csrfInput ?>
+                    <button type="submit">Kirim ke review</button>
+                </form>
+            <?php endif; ?>
+            <?php if ($actions['approve']): ?>
+                <form method="post" action="/drafts/<?= $this->e($draft->id) ?>/approve">
+                    <?= $csrfInput ?>
+                    <button type="submit">Setujui</button>
+                </form>
+            <?php endif; ?>
+            <?php if ($actions['publish']): ?>
+                <form method="post" action="/drafts/<?= $this->e($draft->id) ?>/publish">
+                    <?= $csrfInput ?>
+                    <button type="submit">Terbitkan</button>
+                </form>
+            <?php endif; ?>
+        </div>
+        <?php if ($actions['reject']): ?>
+            <form method="post" action="/drafts/<?= $this->e($draft->id) ?>/reject" class="reject-form">
+                <?= $csrfInput ?>
+                <label>Catatan penolakan (wajib)
+                    <textarea name="note" rows="3"></textarea>
+                </label>
+                <button type="submit" class="danger">Tolak</button>
+            </form>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>
+
 <?php if ($canEdit): ?>
     <?php if ($errors->has(ValidationErrors::FORM)): ?>
         <p class="errors"><?= $this->e($errors->first(ValidationErrors::FORM)) ?></p>
     <?php endif; ?>
 
-    <form method="post" action="draft.php?id=<?= $this->e($draft->id) ?>" class="card">
+    <form method="post" action="/drafts/<?= $this->e($draft->id) ?>" class="card">
         <?= $csrfInput ?>
 
         <label>Judul

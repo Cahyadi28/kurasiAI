@@ -10,6 +10,7 @@ namespace KurasiAI\Http;
 final class Session
 {
     private const FLASH_KEY = '_flash';
+    private const FLASH_ERROR_KEY = '_flash_error';
 
     /** @var array<mixed> */
     private array $data;
@@ -98,14 +99,40 @@ final class Session
     }
 
     /**
+     * Pesan kesalahan satu kali tampil, misalnya "Catatan penolakan wajib diisi." setelah redirect.
+     */
+    public function flashError(string $message): void
+    {
+        $messages = $this->take(self::FLASH_ERROR_KEY);
+        $messages[] = $message;
+        $this->data[self::FLASH_ERROR_KEY] = $messages;
+    }
+
+    /**
      * Mengambil semua pesan flash sekaligus menghapusnya.
      *
      * @return list<string>
      */
     public function takeFlashes(): array
     {
-        $messages = $this->data[self::FLASH_KEY] ?? [];
-        unset($this->data[self::FLASH_KEY]);
+        return $this->take(self::FLASH_KEY);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function takeErrors(): array
+    {
+        return $this->take(self::FLASH_ERROR_KEY);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function take(string $key): array
+    {
+        $messages = $this->data[$key] ?? [];
+        unset($this->data[$key]);
 
         return is_array($messages) ? array_values(array_filter($messages, 'is_string')) : [];
     }
